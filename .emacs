@@ -855,10 +855,11 @@
   :straight t
   :config
   (setq lsp-pyright-disable-language-service nil
-  	  lsp-pyright-disable-organize-imports nil
-  	  lsp-pyright-auto-import-completions t
-  	  lsp-pyright-use-library-code-for-types t))
+  	    lsp-pyright-disable-organize-imports nil
+  	    lsp-pyright-auto-import-completions t
+  	    lsp-pyright-use-library-code-for-types t))
 
+;;; a comint-mode
 (use-package python
   :defer t
   :config
@@ -866,6 +867,7 @@
         python-shell-interpreter-args "-i --simple-prompt"
         python-shell-prompt-detect-failure-warning nil))
 
+;;; a major mode
 (use-package python-mode
   :straight t
   :defer t
@@ -875,6 +877,7 @@
         python-indent 4)
   (setq indent-tabs-mode nil))
 
+;;; an actual mode which uses it all
 (use-package elpy
   :straight t
   :mode "\\.py\\'"
@@ -889,17 +892,18 @@
                              '((elpy-company-backend :with company-yasnippet))))))
   :hook(python-mode . elpy-mode)
   :init
-  (elp-enable)
+  (elpy-enable)
   :config
   (setq elpy-shell-echo-output nil)
   (setq elpy-rpc-python-command "python3")
   (setq elpy-modules (delq 'elpy-module-flymake elpy-modules)))
 
+;;; defer
 (use-package rust-mode
-    :straight t
-    :defer t)
+  :straight t
+  :defer t)
 
+;;; the actual fancy mode
 (use-package rustic
   :straight t
-  :mode "\\.rs\\'"
-  )
+  :mode "\\.rs\\'")
