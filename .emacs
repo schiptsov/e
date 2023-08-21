@@ -442,7 +442,6 @@
   :straight t
   :hook (ivy-mode . ivy-prescient-mode)
   :hook (ivy-prescient-mode . prescient-persist-mode)
-  :commands +ivy-prescient-non-fuzzy
   :init
   (setq prescient-filter-method
         '(literal regexp initialism fuzzy))
@@ -452,7 +451,6 @@
   :straight t
   :after copmany
   :config (company-prescient-mode +1))
-
 
 (use-package helpful
   :straight t
