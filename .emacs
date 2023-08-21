@@ -259,6 +259,11 @@
   :straight t
   :commands writeroom-mode)
 
+(use-package idle-org-agenda
+  :after org-agenda
+  :straight t
+  :config (idle-org-agenda-mode))
+
 (use-package info+
   :straight t)
 
