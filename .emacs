@@ -2,6 +2,8 @@
 
 (setq-default load-prefer-newer t)
 
+(setq native-comp-async-report-warnings-errors nil)
+
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
@@ -40,8 +42,10 @@
   (load bootstrap-file nil 'nomessage))
 
 ;; use-package will use 'straight
-(straight-use-package 'diminish)
+(straight-use-package '(bind-key :type built-in))
 (straight-use-package '(use-package :type built-in))
+(straight-use-package 'diminish)
+(straight-use-package 'delight)
 
 ;; Use the latest version
 (straight-use-package 'org)
@@ -54,7 +58,6 @@
  use-package-verbose nil)
 
 (straight-use-package 'async)
-(straight-use-package 'org)
 (straight-use-package 'ob-async)
 
 (menu-bar-mode t)
@@ -177,19 +180,36 @@
         regexp-search-ring))
 (savehist-mode t)
 
-(straight-use-package 'diminish)
-(straight-use-package 'delight)
-(straight-use-package '(bind-key :type built-in))
-(straight-use-package '(use-package :type built-in))
-
 (straight-use-package 'eldoc)
 
-(use-package xref
+(use-package emacs
+  :custom
+  (auto-save-default t)
+  (make-backup-files t)
+  (backup-by-copying t)
+  (version-control t)
+  (vc-make-backup-files t)
+  (delete-old-versions t)
+  (create-lockfiles t)
+  (auto-save-visited-mode t))
+
+(use-package super-save
   :straight t
+  :diminish
   :config
-  (setq xref-show-definitions-function #'xref-show-definitions-completing-read
-        xref-show-xrefs-function #'xref-show-definitions-completing-read)
-  (setq xref-search-program 'ripgrep))
+  (super-save-mode +1))
+
+(use-package undo-tree
+  :straight t
+  :diminish
+  :init
+  (setq undo-tree-history-directory-alist `(("." . ,(concat user-emacs-directory "undo-tree-hist/"))))
+  :config
+  (setq undo-tree-visualizer-timestamps t)
+  (setq undo-tree-visualizer-diff t
+        undo-tree-auto-save-history t
+        undo-tree-enable-undo-in-region t)
+  (global-undo-tree-mode t))
 
 (use-package unicode-fonts
   :straight t
@@ -198,6 +218,7 @@
 
 (use-package ligature
   :straight t
+  :diminish
   :config
   (ligature-set-ligatures 't '("www"))
   (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
@@ -214,6 +235,7 @@
   (guru-global-mode t))
 
 (use-package nyan-mode
+  :straight t
   :config
   (setq nyan-animate-nyancat t)
   (setq nyan-wavy-trail t)
@@ -239,8 +261,9 @@
   :straight t
   :hook (Info-selection  . info-colors-fontify-node))
 
-  (use-package which-key
+(use-package which-key
   :straight t
+  :diminish
   :config
   (which-key-mode t))
 
@@ -271,6 +294,23 @@
 (use-package vterm
   :straight t)
 
+(use-package xref
+  :straight t
+  :config
+  (setq xref-show-definitions-function #'xref-show-definitions-completing-read
+        xref-show-xrefs-function #'xref-show-definitions-completing-read)
+  (setq xref-search-program 'ripgrep))
+
+(use-package dumb-jump
+  :straight t
+  :after xref
+  :config
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
+
+(use-package avy
+  :straight t
+  :defer t)
+
 (use-package rg
   :straight t)
 
@@ -281,33 +321,88 @@
   :straight t)
 
 (use-package counsel
-     :straight t
-     :bind (("C-x C-f" . counsel-find-file)
-            ("C-x b" . ivy-switch-buffer)
-            ("C-x B" . counsel-switch-buffer-other-window)
-            ("C-c C-r" . counsel-recentf)
-            ("C-x d" . counsel-dired)
-            ("M-s r" . counsel-rg)
-            ("C-c r" . counsel-rg)
-            ("C-c z" . counsel-fzf)
-            ("M-s z" . counsel-fzf)
-            ("C-c g" . counsel-git)
-            ("C-c a" . counsel-ag)
-            :map ivy-minibuffer-map ("C-r" . counsel-minibuffer-history))
-     :config
-     (global-set-key (kbd "M-x") 'counsel-M-x)
-     (global-set-key (kbd "C-x C-f") 'counsel-find-file)
-     (global-set-key (kbd "C-x l") 'counsel-locate)
-     (global-set-key (kbd "C-h f") 'counsel-describe-function)
-     (global-set-key (kbd "C-h v") 'counsel-describe-variable)
-     (global-set-key (kbd "C-h i") 'counsel-info-lookup-symbol)
-     (global-set-key (kbd "C-h u") 'counsel-unicode-char)
-     (global-set-key (kbd "C-h l") 'counsel-find-library)
-     (global-set-key (kbd "C-c j") 'counsel-git-grep)
-     (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
-     (add-to-list 'savehist-additional-variables 'counsel-compile-history)
-     (counsel-mode t)
-     (global-set-key (kbd "M-y") 'counsel-yank-pop))
+  :straight t
+  :diminish
+  :bind (("C-x C-f" . counsel-find-file)
+         ("C-x b" . ivy-switch-buffer)
+         ("C-x B" . counsel-switch-buffer-other-window)
+         ("C-c C-r" . counsel-recentf)
+         ("C-x d" . counsel-dired)
+         ("M-s r" . counsel-rg)
+         ("C-c r" . counsel-rg)
+         ("C-c z" . counsel-fzf)
+         ("M-s z" . counsel-fzf)
+         ("C-c g" . counsel-git)
+         ("C-c a" . counsel-ag)
+         :map ivy-minibuffer-map ("C-r" . counsel-minibuffer-history))
+  :config
+  (global-set-key (kbd "M-x") 'counsel-M-x)
+  (global-set-key (kbd "C-x C-f") 'counsel-find-file)
+  (global-set-key (kbd "C-x l") 'counsel-locate)
+  (global-set-key (kbd "C-h f") 'counsel-describe-function)
+  (global-set-key (kbd "C-h v") 'counsel-describe-variable)
+  (global-set-key (kbd "C-h i") 'counsel-info-lookup-symbol)
+  (global-set-key (kbd "C-h u") 'counsel-unicode-char)
+  (global-set-key (kbd "C-h l") 'counsel-find-library)
+  (global-set-key (kbd "C-c j") 'counsel-git-grep)
+  (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
+  (add-to-list 'savehist-additional-variables 'counsel-compile-history)
+  (counsel-mode t)
+  (global-set-key (kbd "M-y") 'counsel-yank-pop))
+
+(use-package swiper
+  :straight t
+  :bind (("C-s" . swiper-isearch)
+         ("C-r" . swiper-isearch-backward)
+         ("M-s s" . swiper)
+         ("M-s m" . swiper-multi)
+         ("M-s w" . swiper-thing-at-point)))
+
+(use-package ivy
+  :straight t
+  :diminish
+  :after counsel
+  :bind ("C-x b" . ivy-switch-buffer)
+  :config
+  (setq ivy-display-style 'fancy)
+  (setq ivy-fixed-height-minibuffer t)
+  (setq ivy-use-virtual-buffers nil)
+  (setq enable-recursive-minibuffers t)
+  (setq ivy-use-selectable-prompt t)
+  (ivy-set-occur 'counsel-fzf 'counsel-fzf-occur)
+  (ivy-set-occur 'counsel-rg 'counsel-ag-occur)
+  (ivy-set-occur 'ivy-switch-buffer 'ivy-switch-buffer-occur)
+  (ivy-set-occur 'swiper 'swiper-occur)
+  (ivy-set-occur 'swiper-isearch 'swiper-occur)
+  (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
+  (ivy-mode t))
+
+(use-package ivy-avy
+    :straight t
+    :after (avy ivy))
+
+(use-package ivy-rich
+  :straight t
+  :after ivy
+  :init
+  (setq ivy-rich-path-style 'abbrev
+        ivy-virtual-abbreviate 'full)
+  :config
+  (ivy-rich-project-root-cache-mode +1)
+  (ivy-rich-mode t))
+
+(use-package ivy-xref
+  :straight t
+  :after (xref ivy)
+  :init
+  (setq xref-prompt-for-identifier '(not xref-find-definitions
+                                         xref-find-definitions-other-window
+                                         xref-find-definitions-other-frame
+                                         xref-find-references
+                                         spacemacs/jump-to-definition))
+
+  ;; Use ivy-xref to display `xref.el' results.
+  (setq xref-show-xrefs-function #'ivy-xref-show-xrefs))
 
 (use-package helpful
   :straight t
@@ -325,6 +420,11 @@
   (global-set-key (kbd "C-c C-d") #'helpful-at-point)
   (global-set-key (kbd "C-h F") #'helpful-function))
 
+(use-package ace-link
+  :straight t
+  :config
+  (ace-link-setup-default))
+
 (use-package rainbow-delimiters
   :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
@@ -333,13 +433,15 @@
 
 (use-package smartparens
   :straight t
-  :hook (prog-mode . (smartparens-strict-mode show-smartparens-mode))
+  :diminish
+  :hook (prog-mode . smartparens-strict-mode)
   :config
   (require 'smartparens-config)
   (smartparens-global-mode t))
 
 (use-package company
   :straight t
+  :diminish
   :hook (prog-mode . company-mode)
   :config
   (push 'company-capf company-backends)
@@ -347,6 +449,7 @@
 
 (use-package company-posframe
   :straight t
+  :diminish
   :after company
   :hook (company-mode . company-posframe-mode)
   :config
@@ -388,13 +491,9 @@
   :straight t
   :after company)
 
-
-(use-package avy
-  :straight t
-  :defer t)
-
 (use-package flycheck
   :straight t
+  :diminish
   :init
   (global-flycheck-mode t))
 
@@ -410,6 +509,7 @@
 
 (use-package yasnippet
   :straight t
+  :diminish
   :after company
   :config
   (push 'company-yasnippet company-backends)
@@ -425,7 +525,7 @@
 
 (use-package auto-yasnippet
   :straight t
-  :adter yasnippet
+  :after yasnippet
   :config
   (global-set-key (kbd "C-c C-y w")   #'aya-create)
   (global-set-key (kbd "C-c C-y TAB") #'aya-expand)
@@ -439,6 +539,7 @@
 
 (use-package lsp-mode
   :straight t
+  :diminish
   :hook (prog-mode . lsp)
   :init
   (setq lsp-auto-configure t))
@@ -491,6 +592,7 @@
 
 (use-package ggtags
   :straight t
+  :diminish
   :hook (prog-mode . ggtags-mode))
 
 (use-package counsel-gtags
@@ -500,22 +602,22 @@
         counsel-gtags-auto-update t)
   :hook (ggtags-mode . counsel-gtags-mode))
 
-(use-package emacs-lisp-mode
+(use-package elisp-mode
   :defer t
-  :hook (emacs-lisp-mode . ggtags-mode)
-  :hook (emacs-lisp-mode . semantic-mode)
-  :hook (emacs-lisp-mode . auto-compile-mode)
+  :hook (elisp-mode . ggtags-mode)
+  :hook (elisp-mode . semantic-mode)
+  :hook (elisp-mode . auto-compile-mode)
   :config
   (with-eval-after-load 'semantic
     (semantic-default-elisp-setup)))
 
 (use-package highlight-quoted
   :straight t
-  :hook (emacs-lisp-mode . highlight-quoted-mode))
+  :hook (elisp-mode . highlight-quoted-mode))
 
 (use-package highlight-numbers
   :straight t
-  :hook (emacs-lisp-mode . highlight-numbers-mode))
+  :hook (elisp-mode . highlight-numbers-mode))
 
 (use-package ielm
   :defer t
