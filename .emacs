@@ -57,9 +57,6 @@
  use-package-compute-statistics nil
  use-package-verbose nil)
 
-(straight-use-package 'async)
-(straight-use-package 'ob-async)
-
 (menu-bar-mode t)
 
 (tool-bar-mode -1)
@@ -350,6 +347,10 @@
 (use-package ag
   :straight t)
 
+(use-package prescient
+  :straight t
+  :config (prescient-persist-mode +1))
+
 (use-package counsel
   :straight t
   :diminish
@@ -379,14 +380,6 @@
   (add-to-list 'savehist-additional-variables 'counsel-compile-history)
   (counsel-mode t)
   (global-set-key (kbd "M-y") 'counsel-yank-pop))
-
-(use-package swiper
-  :straight t
-  :bind (("C-s" . swiper-isearch)
-         ("C-r" . swiper-isearch-backward)
-         ("M-s s" . swiper)
-         ("M-s m" . swiper-multi)
-         ("M-s w" . swiper-thing-at-point)))
 
 (use-package ivy
   :straight t
@@ -434,12 +427,9 @@
   ;; Use ivy-xref to display `xref.el' results.
   (setq xref-show-xrefs-function #'ivy-xref-show-xrefs))
 
-(use-package prescient
-  :straight t
-  :config (prescient-persist-mode +1))
-
 (use-package ivy-prescient
   :straight t
+  :after iyy
   :hook (ivy-mode . ivy-prescient-mode)
   :hook (ivy-prescient-mode . prescient-persist-mode)
   :init
@@ -447,10 +437,13 @@
         '(literal regexp initialism fuzzy))
   :config (ivy-prescient-mode t))
 
-(use-package company-prescient
+(use-package swiper
   :straight t
-  :after copmany
-  :config (company-prescient-mode +1))
+  :bind (("C-s" . swiper-isearch)
+         ("C-r" . swiper-isearch-backward)
+         ("M-s s" . swiper)
+         ("M-s m" . swiper-multi)
+         ("M-s w" . swiper-thing-at-point)))
 
 (use-package helpful
   :straight t
@@ -494,6 +487,11 @@
   :config
   (push 'company-capf company-backends)
   (global-company-mode t))
+
+(use-package company-prescient
+  :straight t
+  :after copmany
+  :config (company-prescient-mode +1))
 
 (use-package company-posframe
   :straight t
@@ -675,4 +673,135 @@
   :hook (ielm-mode . highlight-quoted-mode)
   :hook (ielm-mode . highlight-numbers-mode))
 
+(straight-use-package 'async)
+(straight-use-package 'ob-async)
+(straight-use-package 'ob-rust)
+(straight-use-package 'ob-sml)
+(use-package ob-erlang
+  :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
+  :defer t)
 
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '(
+   (emacs-lisp . t)
+   (org . t)
+   (shell . t)
+   (awk . t)
+   (scheme . t)
+   (ocaml . t)
+   (python . t)
+   (gnuplot . t)
+   (octave . t)
+   (rust . t)
+   (haskell . t)
+   (sml . t)
+   (erlang . t)
+   ))
+
+(straight-use-package 'tree-sitter-langs)
+(straight-use-package 'tree-sitter-indent)
+(use-package tree-sitter
+  :straight t
+  :defer t
+  ;; :hook (prog-mode . (lambda ()
+  ;;                    (tree-sitter-mode t)
+  ;;                    (tree-sitter-hl-mode t)
+  ;;                    (tree-sitter-indent-mode t)))
+  :init
+  (require 'tree-sitter-langs)
+  (require 'tree-sitter-indent)
+  :config
+  (setq tree-sitter-debug-jump-buttons t
+        tree-sitter-debug-highlight-jump-region t)
+  (add-to-list 'tree-sitter-major-mode-language-alist '(emacs-lisp-mode . elisp))
+  (add-to-list 'tree-sitter-major-mode-language-alist  '(lisp-interaction-mode . elisp))
+  (global-tree-sitter-mode t))
+
+;;; When /not in a rush/, this is a /principle-guided/ way.
+
+(use-package eshell
+  :defer t
+  :after company
+  :hook (eshell-mode .  smartparens-strict-mode)
+  :hook (eshell-mode .  company-mode)
+  :hook (eshell-mode .  hide-mode-line-mode)
+  :hook (eshell-mode . (lambda () (semantic-mode -1)))
+  :bind (:map eshell-mode-map ("C-r"  . counsel-esh-history))
+  :init
+  (setq eshell-cmpl-cycle-completions nil
+        eshell-scroll-to-bottom-on-input 'all
+        eshell-scroll-to-bottom-on-output 'all
+        eshell-input-filter (lambda (input) (not (string-match-p "\\`\\s-+" input)))
+        ;; em-prompt
+        eshell-prompt-regexp "^.* λ "
+        ;; em-glob
+        eshell-glob-case-insensitive t
+        eshell-error-if-no-glob t
+        eshell-kill-processes-on-exit t
+        eshell-hist-ignoredups t
+        eshell-destroy-buffer-when-process-dies t
+        eshell-highlight-prompt t)
+  :config
+  (setq pcomplete-cycle-completions nil)
+  (require 'esh-opt)
+  (require 'em-rebind)
+  (require 'em-glob)
+  (require 'em-prompt)
+  (require 'em-ls)
+  (require 'em-term)
+  (require 'em-unix)
+  (require 'em-smart)
+  (setq eshell-where-to-jump 'begin
+        eshell-review-quick-commands nil
+        eshell-smart-space-goes-to-end t)
+  (add-hook 'eshell-mode-hook #'eshell-smart-initialize))
+
+(use-package esh-help
+  :straight t
+  :after esh-mode
+  :hook (eshell-mode . eldoc-mode)
+  :config (setup-esh-help-eldoc))
+
+(use-package shrink-path
+  :straight t
+  :defer t)
+
+(use-package eshell-did-you-mean
+  :straight t
+  :defer t
+  :after esh-mode
+  :config
+  (eshell-did-you-mean-setup))
+
+(use-package eshell-syntax-highlighting
+  :straight t
+  :hook (eshell-mode . eshell-syntax-highlighting-mode))
+
+(use-package shell-pop
+  :straight t
+  :defer t)
+
+;;; Some hacks to make ~company-mode~ work.
+
+(defun toggle-shell-auto-completion-based-on-path ()
+  "Deactivates automatic completion on remote paths.
+  Retrieving completions for Eshell blocks Emacs. Over remote
+  connections the delay is often annoying, so it's better to let
+  the user activate the completion manually."
+  (if (file-remote-p default-directory)
+      (setq-local company-idle-delay nil)
+    (setq-local company-idle-delay 0.6)))
+
+(defun eshell-switch-company-frontend ()
+  "Sets the company frontend to `company-preview-frontend' in e-shell mode."
+  (require 'company)
+  (setq-local company-backends '(company-capf))
+  (setq-local company-frontends '(company-preview-frontend)))
+
+(add-hook 'eshell-directory-change-hook
+          #'toggle-shell-auto-completion-based-on-path)
+;; The default frontend screws everything up in short windows like
+;; terminal often are
+(add-hook 'eshell-mode-hook
+          #'eshell-switch-company-frontend)
