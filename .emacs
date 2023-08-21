@@ -517,18 +517,33 @@
 (use-package smartparens
   :straight t
   :diminish
-;;  :hook (prog-mode . smartparens-strict-mode)
+  ;;  :hook (prog-mode . smartparens-strict-mode)
   :config
   (require 'smartparens-config)
   (smartparens-global-mode t))
 
 (use-package company
   :straight t
-  :diminish
+  :commands (company-complete-common
+             company-complete-common-or-cycle
+             company-manual-begin
+             company-grab-line)
   :hook (prog-mode . company-mode)
+  :init
+  (global-company-mode)
   :config
-  (push 'company-capf company-backends)
-  (global-company-mode t))
+  (setq company-dabbrev-other-buffers t
+        company-dabbrev-code-other-buffers t)
+  (setq company-minimum-prefix-length 2
+        company-show-numbers nil
+        company-tooltip-limit 14
+        company-tooltip-align-annotations t
+        company-require-match 'never)
+  (setq company-backends
+        '((company-keywords
+           company-capf)
+          (company-abbrev company-dabbrev)
+          )))
 
 (use-package company-prescient
   :straight t
