@@ -8,9 +8,9 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
-(setq-default url-gateway-method 'socks)
-(setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
-(setq-default socks-noproxy '("127.0.0.1"))
+;;(setq-default url-gateway-method 'socks)
+;;(setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
+;;(setq-default socks-noproxy '("127.0.0.1"))
 
 ;; we use straight.el
 (setq package-enable-at-startup nil)
@@ -377,7 +377,9 @@
         markdown-fontify-whole-heading-line t)
   :hook (markdown-mode . (lambda ()
                            (set-face-attribute 'markdown-pre-face nil :inherit 'fixed-pitch)
-                           (set-face-attribute 'markdown-inline-code-face nil :inherit 'fixed-pitch)
+                           (set-face-attribute
+                            'markdown-inline-code-face nil :inherit 'fixed-pitch)
+                           (mixrd-pitch-mode t)
                            (variable-pitch-mode t)))
   :commands (markdown-mode gfm-mode)
   :mode (("README\\.md\\'" . gfm-mode)
@@ -669,6 +671,14 @@
   :straight t
   :hook (flycheck-mode . flycheck-pos-tip-mode))
 
+(setq flycheck-check-syntax-automatically '(save
+                                            idle-change
+                                            mode-enabled))
+
+(eval-after-load 'flycheck
+  '(custom-set-variables
+    '(flycheck-display-errors-function #'flycheck-pos-tip-error-messages)))
+
 (use-package avy-flycheck
   :straight t
   :after flycheck
@@ -779,6 +789,13 @@
         counsel-gtags-auto-update t)
   :hook (ggtags-mode . counsel-gtags-mode))
 
+(use-package  highlight-indent-guides
+  :straight t
+  :diminish
+  :hook ((prog-mode text-mode conf-mode) . highlight-indent-guides-mode)
+  :hook (after-init . highlight-indent-guides-auto-set-faces)
+  :init (setq highlight-indent-guides-method 'character))
+
 (use-package emacs-lisp-mode
   :defer t
   :hook (emacs-lisp-mode . ggtags-mode)
@@ -830,6 +847,96 @@
 (use-package ob-erlang
   :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
   :defer t)
+
+(use-package dired
+  :hook (dired-mode . dired-hide-details-mode)
+  :init
+  (setq dired-dwim-target t
+        dired-hide-details-hide-symlink-targets nil
+        dired-auto-revert-buffer #'dired-buffer-stale-p
+        dired-recursive-copies  'always
+        dired-recursive-deletes 'top
+        dired-create-destination-dirs 'ask)
+  :config
+  )
+
+(use-package dired-async
+  :config
+  (dired-async-mode t))
+
+(use-package dired-x
+  :hook (dired-mode . dired-omit-mode)
+  :commands (dired-jump
+             dired-jump-other-window
+             dired-omit-mode)
+  :config
+  (setq dired-omit-verbose nil
+        dired-omit-files
+        (concat dired-omit-files
+                "\\|^\\.DS_Store\\'"
+                "\\|^\\.project\\(?:ile\\)?\\'"
+                "\\|^\\.\\(?:svn\\|git\\)\\'"
+                "\\|^\\.ccls-cache\\'"
+                "\\|\\(?:\\.js\\)?\\.meta\\'"
+                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
+  )
+
+(use-package dired-aux
+  :defer t
+  :config
+  (setq dired-create-destination-dirs 'ask
+        dired-vc-rename-file t))
+
+(use-package fd-dired
+  :straight t
+  :defer t
+  :init
+  (global-set-key [remap find-dired] #'fd-dired))
+
+(use-package diredfl
+  :straight t
+  :hook (dired-mode . diredfl-mode))
+
+(use-package dired-git-info
+  :straight t
+  :hook (dired-mode . (lambda ()
+                        (dired-git-info-mode t))))
+
+(define-key dired-mode-map (kbd "C-x C-k") 'dired-do-delete)
+
+(use-package magit
+  :straight t
+  :hook (magit-post-refresh  . diff-hl-magit-post-refresh)
+  :config
+  (setq magit-completing-read-function 'ivy-completing-read)
+  (setq transient-default-level 5)
+  (setq magit-save-repository-buffers nil)
+  (setq magit-revision-insert-related-refs nil)
+  (setq magit-diff-refine-hunk t)
+  (setq magit-push-always-verify nil)
+  (setq magit-revert-buffers 'silent)
+  (setq magit-no-confirm '(stage-all-changes unstage-all-changes)))
+
+(use-package ghub
+  :straight t
+  :defer t
+  :after magit)
+
+(use-package forge
+  :straight t
+  :after magit)
+
+(use-package git-modes
+  :straight t
+  :after magit)
+
+(use-package orgit
+  :straight t
+  :after org)
+
+(use-package orgit-forge
+  :straight t
+  :after forge)
 
 (use-package treesit
   :init
