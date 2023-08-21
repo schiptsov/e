@@ -480,7 +480,7 @@
 (use-package smartparens
   :straight t
   :diminish
-  :hook (prog-mode . smartparens-strict-mode)
+;;  :hook (prog-mode . smartparens-strict-mode)
   :config
   (require 'smartparens-config)
   (smartparens-global-mode t))
@@ -704,6 +704,45 @@
    (erlang . t)
    ))
 
+(use-package treesit
+  :init
+  (defun mp-setup-install-grammars ()
+    "Install Tree-sitter grammars if they are absent."
+    (interactive)
+    (dolist (grammar
+             '((css "https://github.com/tree-sitter/tree-sitter-css")
+               (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+               (clojure "https://github.com/sogaiu/tree-sitter-clojure")
+               (ocaml .  ("https://github.com/tree-sitter/tree-sitter-ocaml""master" "ocaml/src"))
+               (haskell "https://github.com/tree-sitter/tree-sitter-haskell")
+               (python "https://github.com/tree-sitter/tree-sitter-python")
+               (rust "https://github.com/tree-sitter/tree-sitter-rust")
+               (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
+               (tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
+               (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+      (add-to-list 'treesit-language-source-alist grammar)
+      ;; Only install `grammar' if we don't already have it
+      ;; installed. However, if you want to *update* a grammar then
+      ;; this obviously prevents that from happening.
+      (unless (treesit-language-available-p (car grammar))
+        (treesit-install-language-grammar (car grammar)))))
+  ;; Optional, but recommended. Tree-sitter enabled major modes are
+  ;; distinct from their ordinary counterparts.
+  ;;
+  ;; You can remap major modes with `major-mode-remap-alist'. Note
+  ;; that this does *not* extend to hooks! Make sure you migrate them
+  ;; also
+  (dolist (mapping '((python-mode . python-ts-mode)
+                     (rust-mode . rust-ts-mode)
+                     (css-mode . css-ts-mode)
+                     (typescript-mode . tsx-ts-mode)
+                     (js-mode . js-ts-mode)
+                     (css-mode . css-ts-mode)
+                     (yaml-mode . yaml-ts-mode)))
+    (add-to-list 'major-mode-remap-alist mapping))
+  :config
+  (mp-setup-install-grammars))
+
 (straight-use-package 'tree-sitter-langs)
 (straight-use-package 'tree-sitter-indent)
 (use-package tree-sitter
@@ -720,7 +759,8 @@
   (setq tree-sitter-debug-jump-buttons t
         tree-sitter-debug-highlight-jump-region t)
   (add-to-list 'tree-sitter-major-mode-language-alist '(emacs-lisp-mode . elisp))
-  (add-to-list 'tree-sitter-major-mode-language-alist  '(lisp-interaction-mode . elisp))
+  (add-to-list 'tree-sitter-major-mode-language-alist '(lisp-interaction-mode . elisp))
+  (add-to-list 'tree-sitter-major-mode-language-alist '(python-mode . python))
   (global-tree-sitter-mode t))
 
 ;;; When /not in a rush/, this is a /principle-guided/ way.
@@ -810,3 +850,56 @@
 ;; terminal often are
 (add-hook 'eshell-mode-hook
           #'eshell-switch-company-frontend)
+
+(use-package lsp-pyright
+  :straight t
+  :config
+  (setq lsp-pyright-disable-language-service nil
+  	  lsp-pyright-disable-organize-imports nil
+  	  lsp-pyright-auto-import-completions t
+  	  lsp-pyright-use-library-code-for-types t))
+
+(use-package python
+  :defer t
+  :config
+  (setq python-shell-interpreter "ipython"
+        python-shell-interpreter-args "-i --simple-prompt"
+        python-shell-prompt-detect-failure-warning nil))
+
+(use-package python-mode
+  :straight t
+  :defer t
+  :hook (python-mode . lsp-deferred)
+  :config
+  (setq tab-width     4
+        python-indent 4)
+  (setq indent-tabs-mode nil))
+
+(use-package elpy
+  :straight t
+  :mode "\\.py\\'"
+  :interpreter "ipython -i"
+  :bind
+  (:map elpy-mode-map
+        ("C-M-n" . elpy-nav-forward-block)
+        ("C-M-p" . elpy-nav-backward-block))
+  :hook ((elpy-mode . flycheck-mode)
+         (elpy-mode . (lambda ()
+                        (set (make-local-variable 'company-backends)
+                             '((elpy-company-backend :with company-yasnippet))))))
+  :hook(python-mode . elpy-mode)
+  :init
+  (elp-enable)
+  :config
+  (setq elpy-shell-echo-output nil)
+  (setq elpy-rpc-python-command "python3")
+  (setq elpy-modules (delq 'elpy-module-flymake elpy-modules)))
+
+(use-package rust-mode
+    :straight t
+    :defer t)
+
+(use-package rustic
+  :straight t
+  :mode "\\.rs\\'"
+  )
