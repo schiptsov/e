@@ -393,6 +393,16 @@
   :straight t
   :config (prescient-persist-mode +1))
 
+(use-package ivy-prescient
+  :straight t
+  :after iyy
+  :hook (ivy-mode . ivy-prescient-mode)
+  :hook (ivy-prescient-mode . prescient-persist-mode)
+  :init
+  (setq prescient-filter-method
+        '(literal regexp initialism fuzzy))
+  :config (ivy-prescient-mode t))
+
 (use-package counsel
   :straight t
   :diminish
@@ -468,16 +478,6 @@
 
   ;; Use ivy-xref to display `xref.el' results.
   (setq xref-show-xrefs-function #'ivy-xref-show-xrefs))
-
-(use-package ivy-prescient
-  :straight t
-  :after iyy
-  :hook (ivy-mode . ivy-prescient-mode)
-  :hook (ivy-prescient-mode . prescient-persist-mode)
-  :init
-  (setq prescient-filter-method
-        '(literal regexp initialism fuzzy))
-  :config (ivy-prescient-mode t))
 
 (use-package swiper
   :straight t
