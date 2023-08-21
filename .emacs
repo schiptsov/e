@@ -8,6 +8,10 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
+(setq-default url-gateway-method 'socks)
+(setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
+(setq-default socks-noproxy '("127.0.0.1"))
+
 ;; we use straight.el
 (setq package-enable-at-startup nil)
 
@@ -317,6 +321,39 @@
   :defer t
   :after pdf-view)
 
+(use-package markdown-mode
+  :straight t
+  :defer t
+  :init
+  (setq markdown-enable-math t
+        markdown-enable-wiki-links t
+        markdown-italic-underscore t
+        markdown-asymmetric-header t
+        markdown-gfm-additional-languages '("python" "sh")
+        markdown-make-gfm-checkboxes-buttons t
+        markdown-fontify-whole-heading-line t)
+  :hook (markdown-mode . (lambda ()
+                           (set-face-attribute 'markdown-pre-face nil :inherit 'fixed-pitch)
+                           (set-face-attribute 'markdown-inline-code-face nil :inherit 'fixed-pitch)
+                           (variable-pitch-mode t)))
+  :commands (markdown-mode gfm-mode)
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode)))
+
+(use-package poly-markdown
+  :straight t
+  :after markdown-mode
+  :hook (markdown-mode . poly-markdown-mode))
+
+(use-package grip-mode
+  :straight t
+  :hook (markdown-mode . grip-mode))
+
+(use-package ox-gfm
+  :straight t
+  :after org)
+
 (use-package vterm
   :straight t
   :commands (vterm vterm-other-window)
@@ -495,7 +532,7 @@
 
 (use-package company-prescient
   :straight t
-  :after copmany
+  :after company
   :config (company-prescient-mode +1))
 
 (use-package company-posframe
@@ -686,24 +723,6 @@
   :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
   :defer t)
 
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '(
-   (emacs-lisp . t)
-   (org . t)
-   (shell . t)
-   (awk . t)
-   (scheme . t)
-   (ocaml . t)
-   (python . t)
-   (gnuplot . t)
-   (octave . t)
-   (rust . t)
-   (haskell . t)
-   (sml . t)
-   (erlang . t)
-   ))
-
 (use-package treesit
   :init
   (defun mp-setup-install-grammars ()
@@ -872,6 +891,7 @@
   :straight t
   :defer t
   :hook (python-mode . lsp-deferred)
+  :hook (python-mode . elpy-mode)
   :config
   (setq tab-width     4
         python-indent 4)
@@ -890,13 +910,17 @@
          (elpy-mode . (lambda ()
                         (set (make-local-variable 'company-backends)
                              '((elpy-company-backend :with company-yasnippet))))))
-  :hook(python-mode . elpy-mode)
   :init
   (elpy-enable)
   :config
   (setq elpy-shell-echo-output nil)
   (setq elpy-rpc-python-command "python3")
   (setq elpy-modules (delq 'elpy-module-flymake elpy-modules)))
+
+(use-package ein
+  :straight t
+  :config
+  (require 'ob-ein))
 
 ;;; defer
 (use-package rust-mode
@@ -907,3 +931,22 @@
 (use-package rustic
   :straight t
   :mode "\\.rs\\'")
+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '(
+   (emacs-lisp . t)
+   (org . t)
+   (shell . t)
+   (awk . t)
+   (scheme . t)
+   (ocaml . t)
+   (python . t)
+   (gnuplot . t)
+   (octave . t)
+   (rust . t)
+   (haskell . t)
+   (sml . t)
+   (erlang . t)
+   (ein. t)
+   ))
