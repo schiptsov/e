@@ -51,9 +51,6 @@
 (straight-use-package 'diminish)
 (straight-use-package 'delight)
 
-;; Use the latest version
-(straight-use-package 'org)
-
 ;; we will use this DSLs (a set of macros)
 (setq
  use-package-always-defer nil   ;; should be nil for :defer to work
@@ -128,10 +125,6 @@
 (setq-default word-wrap t)
 
 (setq-default truncate-lines nil)
-
-(add-hook 'prog-mode-hook (lambda ()
-                            (setq show-trailing-whitespace t)
-                            (setq indicate-empty-lines t)))
 
 (setq-default tab-width 4)
 (setq-default fill-column 72)
@@ -234,7 +227,13 @@
 
 (use-package doom-themes
   :straight t
+  :hook (org-mode . (lambda ()
+                      (require 'doom-themes-ext-org)
+                      (doom-themes-org-config)))
   :config
+  ;; Global settings (defaults)
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
   (load-theme 'doom-nord t))
 
 (use-package guru-mode
@@ -262,6 +261,50 @@
 (use-package writeroom-mode
   :straight t
   :commands writeroom-mode)
+
+;; Use the latest version
+(straight-use-package 'org)
+
+(use-package org-indent
+  :after org
+  :hook (org-mode . org-indent-mode))
+
+(use-package org-rich-yank
+  :straight t
+  :after org
+  :bind (:map org-mode-map
+              ("C-M-y" . org-rich-yank)))
+
+(use-package org-cliplink
+  :straight t
+  :after org)
+
+(use-package org-download
+  :straight t
+  :after org)
+
+(use-package org-web-tools
+  :straight t
+  :after org)
+
+(use-package org-appear
+  :straight t
+  :after org
+  :hook (org-mode . org-appear-mode)
+  :config
+  (setq org-appear-autoemphasis t
+        org-appear-autosubmarkers t
+        org-appear-autolinks t)
+  ;; for proper first-time setup, `org-appear--set-elements'
+  ;; needs to be run after other hooks have acted.
+  (run-at-time nil nil #'org-appear--set-elements))
+
+(use-package org-modern
+  :straight t
+  :after  org
+  :hook (org-mode . org-modern-mode)
+  :config
+  (setq  org-modern-star '("◉" "○" "✸" "✿" "✤" "✜" "◆" "▶")))
 
 (use-package idle-org-agenda
   :after org-agenda
@@ -393,16 +436,6 @@
   :straight t
   :config (prescient-persist-mode +1))
 
-(use-package ivy-prescient
-  :straight t
-  :after iyy
-  :hook (ivy-mode . ivy-prescient-mode)
-  :hook (ivy-prescient-mode . prescient-persist-mode)
-  :init
-  (setq prescient-filter-method
-        '(literal regexp initialism fuzzy))
-  :config (ivy-prescient-mode t))
-
 (use-package counsel
   :straight t
   :diminish
@@ -438,6 +471,20 @@
   :diminish
   :after counsel
   :bind ("C-x b" . ivy-switch-buffer)
+  :init
+  (let ((standard-search-fn
+         #'ivy--regex-plus)
+        (alt-search-fn
+         #'ivy--regex-fuzzy))
+    (setq ivy-re-builders-alist
+          `((counsel-rg     . ,standard-search-fn)
+            (swiper         . ,standard-search-fn)
+            (swiper-isearch . ,standard-search-fn)
+            (t . ,alt-search-fn))
+          ivy-more-chars-alist
+          '((counsel-rg . 1)
+            (counsel-search . 2)
+            (t . 3))))
   :config
   (setq ivy-display-style 'fancy)
   (setq ivy-fixed-height-minibuffer t)
@@ -452,9 +499,19 @@
   (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
   (ivy-mode t))
 
+(use-package ivy-prescient
+  :straight t
+  :after iyy
+  :hook (ivy-mode . ivy-prescient-mode)
+  :hook (ivy-prescient-mode . prescient-persist-mode)
+  :init
+  (setq prescient-filter-method
+        '(literal regexp initialism fuzzy))
+  :config (ivy-prescient-mode t))
+
 (use-package ivy-avy
-    :straight t
-    :after (avy ivy))
+  :straight t
+  :after (avy ivy))
 
 (use-package ivy-rich
   :straight t
@@ -517,10 +574,18 @@
 (use-package smartparens
   :straight t
   :diminish
-  ;;  :hook (prog-mode . smartparens-strict-mode)
+  :hook (prog-mode . turn-on-smartparens-mode)
+  :init
+  (smartparens-global-mode t)
   :config
-  (require 'smartparens-config)
-  (smartparens-global-mode t))
+  (require 'smartparens-config))
+
+(defun conditionally-enable-smartparens-mode ()
+  "Enable `smartparens-mode' in the minibuffer, during `eval-expression'."
+  (if (eq this-command 'eval-expression)
+      (smartparens-mode 1)))
+
+(add-hook 'minibuffer-setup-hook 'conditionally-enable-smartparens-mode)
 
 (use-package company
   :straight t
@@ -559,12 +624,12 @@
   (setq company-tooltip-minimum-width 40))
 
 (use-package company-quickhelp
-        :straight t
-        :after company
-        :custom
-        (company-quickhelp-delay 3)
-        :config
-        (company-quickhelp-mode t))
+  :straight t
+  :after company
+  :custom
+  (company-quickhelp-delay 3)
+  :config
+  (company-quickhelp-mode t))
 
 (use-package company-math
   :straight t
@@ -668,6 +733,15 @@
   (setq lsp-eldoc-enable-hover t)
   (setq lsp-ui-doc-show-with-cursor t))
 
+(add-hook 'prog-mode-hook (lambda ()
+                            (setq show-trailing-whitespace t)
+                            (setq indicate-empty-lines t)
+                            (set-fill-column 72)
+                            (auto-fill-mode t)
+                            (electric-pair-mode t)
+                            (electric-indent-mode t)
+                            (abbrev-mode t)))
+
 (use-package rainbow-mode
   :straight t
   :config
@@ -721,6 +795,25 @@
 (use-package highlight-numbers
   :straight t
   :hook (emacs-lisp-mode . highlight-numbers-mode))
+
+(use-package elisp-def
+  :straight t
+  :diminish
+  :hook (emacs-lisp-mode . elisp-def-mode))
+
+(use-package macrostep
+  :straight t
+  :mode (("\\*.el\\'" . emacs-lisp-mode)
+         ("Cask\\'" . emacs-lisp-mode)))
+
+(use-package elisp-slime-nav
+  :straight t
+  :diminish
+  :hook (emacs-lisp-mode  . elisp-slime-nav-mode))
+
+(use-package eval-sexp-fu
+  :straight t
+  :hook (emacs-lisp-mode . eval-sexp-fu-flash-mode))
 
 (use-package ielm
   :defer t
