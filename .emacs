@@ -159,8 +159,6 @@
 (setq save-abbrevs 'silently)
 (bind-key "M-/" 'hippie-expand)
 
-(global-eldoc-mode t)
-
 (auto-save-visited-mode t)
 
 (defun save-all ()
@@ -180,7 +178,16 @@
         regexp-search-ring))
 (savehist-mode t)
 
-(straight-use-package 'eldoc)
+(use-package auto-compile
+  :straight t
+  :defer nil
+  :config (auto-compile-on-load-mode))
+
+(use-package eldoc
+  :straight t
+  :diminish
+  :config
+  (global-eldoc-mode t))
 
 (use-package emacs
   :custom
@@ -231,6 +238,7 @@
 
 (use-package guru-mode
   :straight t
+  :delight
   :config
   (guru-global-mode t))
 
@@ -281,18 +289,40 @@
   :straight t
   :hook
   ((text-mode . mixed-pitch-mode)
-  (help-mode . mixed-pitch-mode)
-  (org-mode . mixed-pitch-mode)
-  (latex-mode . mixed-pitch-mode)
-  (markdown-mode . mixed-pitch-mode)
-  (gfm-mode . mixed-pitch-mode)
-  (info-mode . mixed-pitch-mode)
-  (nov-mode . mixed-pitch-mode))
+   (help-mode . mixed-pitch-mode)
+   (org-mode . mixed-pitch-mode)
+   (latex-mode . mixed-pitch-mode)
+   (markdown-mode . mixed-pitch-mode)
+   (gfm-mode . mixed-pitch-mode)
+   (info-mode . mixed-pitch-mode)
+   (nov-mode . mixed-pitch-mode))
   :config
   (variable-pitch-mode -1))
 
+(use-package pdf-tools
+  :straight t
+  :defer t
+  :mode ("\\.pdf\\'" . pdf-view-mode)
+  :magic ("%PDF" . pdf-view-mode)
+  :config
+  (setq-default pdf-view-display-size 'fit-page)
+  (setq pdf-view-use-scaling t
+        pdf-view-use-imagemagick nil)
+  (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode))
+
+(use-package saveplace-pdf-view
+  :straight t
+  :defer t
+  :after pdf-view)
+
 (use-package vterm
-  :straight t)
+  :straight t
+  :commands (vterm vterm-other-window)
+  :config
+  (define-key vterm-mode-map (kbd "M-n") 'vterm-send-down)
+  (define-key vterm-mode-map (kbd "M-p") 'vterm-send-up)
+  (define-key vterm-mode-map (kbd "M-y") 'vterm-yank-pop)
+  (define-key vterm-mode-map (kbd "M-/") 'vterm-send-tab))
 
 (use-package xref
   :straight t
@@ -403,6 +433,26 @@
 
   ;; Use ivy-xref to display `xref.el' results.
   (setq xref-show-xrefs-function #'ivy-xref-show-xrefs))
+
+(use-package prescient
+  :straight t
+  :config (prescient-persist-mode +1))
+
+(use-package ivy-prescient
+  :straight t
+  :hook (ivy-mode . ivy-prescient-mode)
+  :hook (ivy-prescient-mode . prescient-persist-mode)
+  :commands +ivy-prescient-non-fuzzy
+  :init
+  (setq prescient-filter-method
+        '(literal regexp initialism fuzzy))
+  :config (ivy-prescient-mode t))
+
+(use-package company-prescient
+  :straight t
+  :after copmany
+  :config (company-prescient-mode +1))
+
 
 (use-package helpful
   :straight t
@@ -602,22 +652,22 @@
         counsel-gtags-auto-update t)
   :hook (ggtags-mode . counsel-gtags-mode))
 
-(use-package elisp-mode
+(use-package emacs-lisp-mode
   :defer t
-  :hook (elisp-mode . ggtags-mode)
-  :hook (elisp-mode . semantic-mode)
-  :hook (elisp-mode . auto-compile-mode)
+  :hook (emacs-lisp-mode . ggtags-mode)
+  :hook (emacs-lisp-mode . semantic-mode)
+  :hook (emacs-lisp-mode . auto-compile-mode)
   :config
   (with-eval-after-load 'semantic
-    (semantic-default-elisp-setup)))
+    (semantic-default-emacs-lisp-setup)))
 
 (use-package highlight-quoted
   :straight t
-  :hook (elisp-mode . highlight-quoted-mode))
+  :hook (emacs-lisp-mode . highlight-quoted-mode))
 
 (use-package highlight-numbers
   :straight t
-  :hook (elisp-mode . highlight-numbers-mode))
+  :hook (emacs-lisp-mode . highlight-numbers-mode))
 
 (use-package ielm
   :defer t
