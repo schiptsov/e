@@ -784,7 +784,7 @@
            company-gtags
            company-etags
            company-semantic
-           conpany-files)
+           company-files)
           (company-abbrev company-dabbrev company-dabbrev-code)
           )))
 
