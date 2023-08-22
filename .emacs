@@ -619,10 +619,6 @@
 (use-package ag
   :straight t)
 
-(use-package prescient
-  :straight t
-  :config (prescient-persist-mode +1))
-
 (use-package counsel
   :straight t
   :defer t
@@ -692,8 +688,7 @@
   (ivy-mode t))
 
 (use-package ivy-avy
-  :straight t
-  :after (avy ivy))
+  :straight t)
 
 (use-package ivy-rich
   :straight t
@@ -711,8 +706,7 @@
   (setq xref-prompt-for-identifier '(not xref-find-definitions
                                          xref-find-definitions-other-window
                                          xref-find-definitions-other-frame
-                                         xref-find-references
-                                         spacemacs/jump-to-definition))
+                                         xref-find-references))
 
   ;; Use ivy-xref to display `xref.el' results.
   (setq xref-show-xrefs-function #'ivy-xref-show-xrefs))
@@ -724,23 +718,6 @@
          ("M-s s" . swiper)
          ("M-s m" . swiper-multi)
          ("M-s w" . swiper-thing-at-point)))
-
-(use-package ivy-prescient
-  :straight t
-  :hook (ivy-mode . ivy-prescient-mode)
-  :hook (ivy-prescient-mode . prescient-persist-mode)
-  :init
-  (setq prescient-filter-method
-        '(literal regexp initialism fuzzy))
-  :config
-  (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
-  (setq ivy-prescient-sort-commands
-        '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
-               ivy-resume ivy--restore-session counsel-grep counsel-git-grep
-               counsel-rg counsel-ag counsel-ack counsel-fzf counsel-pt counsel-imenu
-               counsel-yank-pop counsel-recentf counsel-buffer-or-recentf
-               counsel-outline counsel-org-goto counsel-jq)
-        ivy-prescient-retain-classic-highlighting t))
 
 (use-package helpful
   :straight t
@@ -805,43 +782,63 @@
         company-require-match 'never)
   (setq company-backends
         '((company-keywords
-           company-capf)
-          (company-abbrev company-dabbrev)
+           company-capf
+           company-gtags
+           company-etags
+           company-semantic
+           conpany-files)
+          (company-abbrev company-dabbrev company-dabbrev-code)
           )))
+
+(use-package prescient
+  :straight t
+  :config (prescient-persist-mode +1))
+
+(use-package ivy-prescient
+  :straight t
+  :hook (ivy-mode . ivy-prescient-mode)
+  :hook (ivy-prescient-mode . prescient-persist-mode)
+  :init
+  (setq prescient-filter-method
+        '(literal regexp initialism fuzzy))
+  :config
+  (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
+  (setq ivy-prescient-sort-commands
+        '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
+               ivy-resume ivy--restore-session counsel-grep counsel-git-grep
+               counsel-rg counsel-ag counsel-ack counsel-fzf counsel-pt counsel-imenu
+               counsel-yank-pop counsel-recentf counsel-buffer-or-recentf
+               counsel-outline counsel-org-goto counsel-jq)
+        ivy-prescient-retain-classic-highlighting t))
 
 (use-package company-prescient
   :straight t
-  :after company
-  :config (company-prescient-mode +1))
+  :hook (company-mode . company-prescient-mode)
+  :hook (company-prescient-mode . prescient-persist-mode))
 
 (use-package company-posframe
   :straight t
   :diminish
-  :after company
   :hook (company-mode . company-posframe-mode)
   :config
   (setq company-tooltip-minimum-width 40))
 
 (use-package company-quickhelp
   :straight t
-  :after company
   :custom
   (company-quickhelp-delay 3)
-  :config
-  (company-quickhelp-mode t))
+  :hook (company-mode . company-quickhelp-mode))
 
 (use-package company-math
   :straight t
-  :after company
   :config
   (setq company-math-disallow-unicode-symbols-in-faces t)
   ;;(add-to-list 'company-backends 'company-math-symbols-latex)
-  (append '((company-math-symbols-latex company-math-symbols-unicode))
+  (append '(company-math-symbols-latex company-math-symbols-unicode)
           company-backends))
 
 (use-package company-org-block
   :straight t
-  :after company
   :custom
   (company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
   :hook (org-mode . (lambda ()
@@ -850,13 +847,14 @@
 
 (use-package company-statistics
   :straight t
-  :after company
   :config
   (company-statistics-mode))
 
 (use-package company-web
   :straight t
-  :after company)
+  :config
+  :hook (nxml-mode . (lambda ()
+                       (add-to-list 'company-backends 'company-web-html))))
 
 (use-package flycheck
   :straight t
@@ -916,7 +914,12 @@
   :straight t
   :diminish
   :hook (prog-mode . lsp)
+  :hook (lsp-completion-mode . (lambda ()
+                                 (remq 'company-capf company-backends)))
   :init
+  (setq lsp-enable-folding nil)
+  (setq lsp-enable-on-type-formatting t)
+  (setq lsp-headerline-breadcrumb-enable t)
   (setq lsp-auto-configure t))
 
 (use-package company-lsp
@@ -931,6 +934,13 @@
   :init
   (setq lsp-auto-configure t)
   :config
+  (setq lsp-ui-peek-enable t
+        lsp-ui-doc-max-height 8
+        lsp-ui-doc-max-width 72         ; 150 (default) is too wide
+        lsp-ui-doc-delay 0.75           ; 0.2 (default) is too naggy
+        lsp-ui-doc-show-with-mouse nil  ; don't disappear on mouseover
+        lsp-ui-doc-position 'at-point
+        lsp-ui-sideline-ignore-duplicate t)
   (setq lsp-modeline-code-actions-enable nil)
   (setq lsp-ui-sideline-enable nil)
   (setq lsp-ui-sideline-show-hover t)
@@ -939,6 +949,10 @@
   (setq lsp-ui-doc-enable t)
   (setq lsp-eldoc-enable-hover t)
   (setq lsp-ui-doc-show-with-cursor t))
+
+(use-package lsp-ivy
+  :straight t
+  :commands lsp-ivy-workspace-symbol lsp-ivy-global-workspace-symbol)
 
 (add-hook 'prog-mode-hook (lambda ()
                             (setq show-trailing-whitespace t)
@@ -997,7 +1011,9 @@
 (use-package ggtags
   :straight t
   :diminish
-  :hook (prog-mode . ggtags-mode))
+  :hook (prog-mode . ggtags-mode)
+  :config
+  (push 'company-gtags company-backends))
 
 (use-package counsel-gtags
   :straight t
@@ -1342,7 +1358,8 @@
   :hook ((elpy-mode . flycheck-mode)
          (elpy-mode . (lambda ()
                         (set (make-local-variable 'company-backends)
-                             '((elpy-company-backend :with company-yasnippet))))))
+                             '((elpy-company-backend :with
+                                                     company-yasnippet company-lsp))))))
   :init
   (elpy-enable)
   :config
