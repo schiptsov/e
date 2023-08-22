@@ -454,8 +454,8 @@
   :straight t
   :hook (mixed-pitch-mode .  solaire-mode-reset)
   :hook (prog-mode . solaire-mode-reset)
-  :hook (after-init .(lambda ()
-                       (solaire-global-mode +1))))
+  :hook (after-init . (lambda ()
+                        (solaire-global-mode +1))))
 
 (use-package guru-mode
   :straight t
@@ -959,7 +959,8 @@
                             (auto-fill-mode t)
                             (electric-pair-mode t)
                             (electric-indent-mode t)
-                            (abbrev-mode t)))
+                            (abbrev-mode t)
+                            (rainbow-delimiters-mode t)))
 
 (use-package rainbow-mode
   :straight t
@@ -1170,54 +1171,25 @@
   :defer t
   :after forge)
 
-(use-package treesit
-  :init
-  (defun mp-setup-install-grammars ()
-    "Install Tree-sitter grammars if they are absent."
-    (interactive)
-    (dolist (grammar
-             '((css "https://github.com/tree-sitter/tree-sitter-css")
-               (elisp "https://github.com/Wilfred/tree-sitter-elisp")
-               (clojure "https://github.com/sogaiu/tree-sitter-clojure")
-               (ocaml .  ("https://github.com/tree-sitter/tree-sitter-ocaml""master" "ocaml/src"))
-               (haskell "https://github.com/tree-sitter/tree-sitter-haskell")
-               (python "https://github.com/tree-sitter/tree-sitter-python")
-               (rust "https://github.com/tree-sitter/tree-sitter-rust")
-               (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
-               (tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
-               (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
-      (add-to-list 'treesit-language-source-alist grammar)
-      ;; Only install `grammar' if we don't already have it
-      ;; installed. However, if you want to *update* a grammar then
-      ;; this obviously prevents that from happening.
-      (unless (treesit-language-available-p (car grammar))
-        (treesit-install-language-grammar (car grammar)))))
-  ;; Optional, but recommended. Tree-sitter enabled major modes are
-  ;; distinct from their ordinary counterparts.
-  ;;
-  ;; You can remap major modes with `major-mode-remap-alist'. Note
-  ;; that this does *not* extend to hooks! Make sure you migrate them
-  ;; also
-  (dolist (mapping '((python-mode . python-ts-mode)
-                     (rust-mode . rust-ts-mode)
-                     (css-mode . css-ts-mode)
-                     (typescript-mode . tsx-ts-mode)
-                     (js-mode . js-ts-mode)
-                     (css-mode . css-ts-mode)
-                     (yaml-mode . yaml-ts-mode)))
-    (add-to-list 'major-mode-remap-alist mapping))
+(use-package treesit-auto
+  :straight t
   :config
-  (mp-setup-install-grammars))
+  (global-treesit-auto-mode))
+
+(use-package treesit
+  :defer t)
 
 (straight-use-package 'tree-sitter-langs)
 (straight-use-package 'tree-sitter-indent)
+
 (use-package tree-sitter
   :straight t
   :defer t
   ;; :hook (prog-mode . (lambda ()
-  ;;                    (tree-sitter-mode t)
-  ;;                    (tree-sitter-hl-mode t)
-  ;;                    (tree-sitter-indent-mode t)))
+  ;;                      (tree-sitter-mode t)
+  ;;                      (tree-sitter-hl-mode t)
+  ;;                      (tree-sitter-indent-mode t)))
+  :hook (tree-sitter-after-on . tree-sitter-hl-mode)
   :init
   (require 'tree-sitter-langs)
   (require 'tree-sitter-indent)
@@ -1328,6 +1300,11 @@
 ;;; a comint-mode
 (use-package python
   :defer t
+  :hook (python-mode . (lambda ()
+                         (semantic-mode t)
+                         (python-mode t)
+                         (elpy-mode t)))
+  :interpreter "ipython -i"
   :config
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "-i --simple-prompt"
@@ -1348,7 +1325,6 @@
 (use-package elpy
   :straight t
   :mode "\\.py\\'"
-  :interpreter "ipython -i"
   :bind
   (:map elpy-mode-map
         ("C-M-n" . elpy-nav-forward-block)
