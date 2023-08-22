@@ -386,6 +386,10 @@
         undo-tree-enable-undo-in-region t)
   (global-undo-tree-mode t))
 
+(use-package fontaine
+  :straight t
+  :defer t)
+
 (use-package unicode-fonts
   :straight t
   :config
@@ -514,6 +518,10 @@
   ;; for proper first-time setup, `org-appear--set-elements'
   ;; needs to be run after other hooks have acted.
   (run-at-time nil nil #'org-appear--set-elements))
+
+(use-package ef-themes
+  :straight t
+  :defer t)
 
 (use-package doom-themes
   :straight t
@@ -841,15 +849,15 @@
                counsel-outline counsel-org-goto counsel-jq)
         ivy-prescient-retain-classic-highlighting t))
 
-(use-package ivy-posframe
-  :straight t
-  :hook (ivy-mode . ivy-posframe-mode)
-  :config
-  (setq ivy-fixed-height-minibuffer nil
-        ivy-posframe-border-width 10
-        ivy-posframe-parameters
-        `((min-width . 90)
-          (min-height . ,ivy-height))))
+;; (use-package ivy-posframe
+;;   :straight t
+;;   :hook (ivy-mode . ivy-posframe-mode)
+;;   :config
+;;   (setq ivy-fixed-height-minibuffer nil
+;;         ivy-posframe-border-width 10
+;;         ivy-posframe-parameters
+;;         `((min-width . 90)
+;;           (min-height . ,ivy-height))))
 
 (use-package ivy-avy
   :straight t
