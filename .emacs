@@ -196,7 +196,8 @@
   (setq prettify-symbols-alist
         (append '(("def" . ?ƒ) ("None" . "∅"))
                 extra-prettify-symbols-alist))
-  )
+  (setq prettify-symbols-unprettify-at-point 'right-edge)
+  (prettify-symbols-mode t))
 
 (defun gas-js-prettify-symbols-hook ()
   "Set pretty symbols for JavaScript."
@@ -221,7 +222,7 @@
 
 ;; Hook 'em up.
 (add-hook 'emacs-lisp-mode-hook #'gas-lisp-prettify-symbols-hook)
-;; (add-hook 'python-mode-hook     #'gas-python-prettify-symbols-hook)
+(add-hook 'python-mode-hook     #'gas-python-prettify-symbols-hook)
 (add-hook 'web-mode-hook        #'other-prettify-symbols-hook)
 (add-hook 'js-mode-hook         #'gas-js-prettify-symbols-hook)
 (add-hook 'prog-mode-hook       #'other-prettify-symbols-hook)
@@ -658,19 +659,10 @@
   :hook (after-init . ivy-mode) ;; another kludge
   :bind ("C-x b" . ivy-switch-buffer)
   :init
-  (let ((standard-search-fn
-         #'ivy--regex-plus)
-        (alt-search-fn
-         #'ivy--regex-fuzzy))
-    (setq ivy-re-builders-alist
-          `((counsel-rg     . ,standard-search-fn)
-            (swiper         . ,standard-search-fn)
-            (swiper-isearch . ,standard-search-fn)
-            (t . ,alt-search-fn))
-          ivy-more-chars-alist
-          '((counsel-rg . 1)
-            (counsel-search . 2)
-            (t . 3))))
+  (setq ivy-more-chars-alist
+        '((counsel-rg . 1)
+          (counsel-search . 2)
+          (t . 3)))
   :config
   (require 'counsel nil t) ;; a kludge
   (setq ivy-display-style 'fancy)
@@ -692,13 +684,15 @@
 
 (use-package ivy-rich
   :straight t
-  :hook (ivy-mode . ivy-rich-mode)
+  :after ivy
+  ;; :hook (ivy-mode . ivy-rich-mode)
   :init
   (setq ivy-rich-path-style 'abbrev
         ivy-virtual-abbreviate 'full)
   :config
   (setq ivy-rich-parse-remote-buffer nil)
-  (ivy-rich-project-root-cache-mode +1))
+  (ivy-rich-project-root-cache-mode +1)
+  (ivy-rich-mode t))
 
 (use-package ivy-xref
   :straight t
