@@ -12,6 +12,8 @@
 ;;(setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
 ;;(setq-default socks-noproxy '("127.0.0.1"))
 
+;; use hooks and implicit defers, not afters
+
 ;; we use straight.el
 (setq package-enable-at-startup nil)
 
@@ -695,36 +697,16 @@
 
 (use-package ivy-rich
   :straight t
-  :after ivy
+  :hook (ivy-mode . ivy-rich-mode)
   :init
   (setq ivy-rich-path-style 'abbrev
         ivy-virtual-abbreviate 'full)
   :config
   (setq ivy-rich-parse-remote-buffer nil)
-  (ivy-rich-project-root-cache-mode +1)
-  (ivy-rich-mode t))
-
-(use-package ivy-prescient
-  :straight t
-  :after iyy
-  :hook (ivy-mode . ivy-prescient-mode)
-  :hook (ivy-prescient-mode . prescient-persist-mode)
-  :init
-  (setq prescient-filter-method
-        '(literal regexp initialism fuzzy))
-  :config
-  (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
-  (setq ivy-prescient-sort-commands
-        '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
-               ivy-resume ivy--restore-session counsel-grep counsel-git-grep
-               counsel-rg counsel-ag counsel-ack counsel-fzf counsel-pt counsel-imenu
-               counsel-yank-pop counsel-recentf counsel-buffer-or-recentf
-               counsel-outline counsel-org-goto counsel-jq)
-        ivy-prescient-retain-classic-highlighting t))
+  (ivy-rich-project-root-cache-mode +1))
 
 (use-package ivy-xref
   :straight t
-  :after (xref ivy)
   :init
   (setq xref-prompt-for-identifier '(not xref-find-definitions
                                          xref-find-definitions-other-window
@@ -742,6 +724,23 @@
          ("M-s s" . swiper)
          ("M-s m" . swiper-multi)
          ("M-s w" . swiper-thing-at-point)))
+
+(use-package ivy-prescient
+  :straight t
+  :hook (ivy-mode . ivy-prescient-mode)
+  :hook (ivy-prescient-mode . prescient-persist-mode)
+  :init
+  (setq prescient-filter-method
+        '(literal regexp initialism fuzzy))
+  :config
+  (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
+  (setq ivy-prescient-sort-commands
+        '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
+               ivy-resume ivy--restore-session counsel-grep counsel-git-grep
+               counsel-rg counsel-ag counsel-ack counsel-fzf counsel-pt counsel-imenu
+               counsel-yank-pop counsel-recentf counsel-buffer-or-recentf
+               counsel-outline counsel-org-goto counsel-jq)
+        ivy-prescient-retain-classic-highlighting t))
 
 (use-package helpful
   :straight t
