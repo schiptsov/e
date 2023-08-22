@@ -98,8 +98,22 @@
          (set-face-attribute 'variable-pitch-serif nil :font value)
          (set-default-toplevel-value symbol value)))
 
+(set-fontset-font t 'unicode (font-spec :family "Noto Emoji") nil 'prepend)
+(set-fontset-font t 'devanagari (font-spec :family "Noto Sans Devanagari"))
+
+(pixel-scroll-precision-mode 1)
+(setq pixel-scroll-precision-large-scroll-height 35.0)
+
+(setq find-file-visit-truename t)
+(setq vc-follow-symlinks t)
+
 (setq-default indent-tabs-mode nil)
+(add-hook 'sh-mode-hook (lambda () (setq indent-tabs-mode t)))
+
 (setq-default tab-always-indent 'complete)
+
+(define-key completion-in-region-mode-map (kbd "C-p") #'minibuffer-previous-completion)
+  (define-key completion-in-region-mode-map (kbd "C-n") #'minibuffer-next-completion)
 
 (global-set-key (kbd "RET") 'newline-and-indent)
 
@@ -116,8 +130,11 @@
 (setq-default font-use-system-font t)
 (setq-default font-lock-maximum-decoration t)
 
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
 (setq whitespace-style '(face spaces tabs newline space-mark tab-mark))
 (global-whitespace-mode t)
+(global-set-key (kbd "C-c w") #'whitespace-mode)
 
 (defvar base-prettify-symbols-alist
   '(("<=" . ?≤)
@@ -236,11 +253,21 @@
 (setq-default word-wrap t)
 
 (setq-default truncate-lines nil)
+(add-hook 'eshell-mode-hook (lambda () (setq-local truncate-lines nil)))
 
 (setq-default tab-width 4)
 (setq-default fill-column 72)
 (set-fill-column 72)
 (auto-fill-mode t)
+
+(when (executable-find "rg")
+  (setq grep-program "rg"))
+
+(when (executable-find "fd")
+  (setq find-program "fd"))
+
+(when (executable-find "aspell")
+  (setq ispell-program-name "aspell"))
 
 (global-highlight-changes-mode -1)
 
@@ -260,9 +287,10 @@
 
 (delete-selection-mode t)
 
+(global-set-key [remap dabbrev-expand] 'hippie-expand)
 (abbrev-mode t)
 (setq save-abbrevs 'silently)
-(bind-key "M-/" 'hippie-expand)
+;; (bind-key "M-/" 'hippie-expand)
 
 (auto-save-visited-mode t)
 
@@ -274,6 +302,12 @@
 
 (recentf-mode t)
 
+(defun find-recent-file ()
+  "Find a file that was recently visted using `completing-read'."
+  (interactive)
+  (find-file (completing-read "Find recent file: " recentf-list nil t)))
+(global-set-key (kbd "C-c r") #'find-recent-file)
+
 (setq history-length t)
 (setq history-delete-duplicates t)
 (setq savehist-save-minibuffer-history 1)
@@ -283,15 +317,44 @@
         regexp-search-ring))
 (savehist-mode t)
 
+(global-set-key [remap list-buffers] 'ibuffer)
+(global-set-key (kbd "C-x C-p") 'previous-buffer)  ; Overrides `mark-page'
+(global-set-key (kbd "C-x C-n") 'next-buffer)      ; Overrides `set-goal-column'
+
+(setq compilation-scroll-output t)
+
+(defun colorize-compilation-buffer ()
+  "Enable colors in the *compilation* buffer."
+  (require 'ansi-color)
+  (let ((inhibit-read-only t))
+    (ansi-color-apply-on-region (point-min) (point-max))))
+
+(add-hook 'compilation-filter-hook #'colorize-compilation-buffer)
+
 (use-package auto-compile
   :straight t
   :defer nil
   :config (auto-compile-on-load-mode))
 
+(use-package flymake
+  :bind (:map flymake-mode-map
+         ("M-n" . flymake-goto-next-error)
+         ("M-p" . flymake-goto-prev-error)))
+
+(defun my-find-tag ()
+  "Use `completing-read' to navigate to a tag."
+  (interactive)
+  (xref-find-definitions (completing-read "Find tag: " tags-completion-table)))
+
+(global-set-key (kbd "C-c d") #'my-find-tag)
+
+(global-set-key (kbd "C-c f") #'ffap)
+
 (use-package eldoc
   :straight t
   :diminish
   :config
+  (setq eldoc-echo-area-use-multiline-p nil)
   (global-eldoc-mode t))
 
 (use-package emacs
@@ -351,6 +414,16 @@
                               (solaire-mode t)
                               (variable-pitch-mode t))))
 
+(use-package visual-fill-column
+  :straight t
+  :hook (visual-line-mode . visual-fill-column-mode))
+
+(defun display-ansi-colors ()
+  "Render colors in a buffer that contains ASCII color escape codes."
+  (interactive)
+  (require 'ansi-color)
+  (ansi-color-apply-on-region (point-min) (point-max)))
+
 ;; Use the latest version
 (straight-use-package 'org)
 (straight-use-package 'org-contrib)
@@ -359,6 +432,9 @@
   :straight t
   :custom
   (org-src-tab-acts-natively t)
+  :hook (org-mode . (lambda ()
+                      (add-hook 'after-save-hook #'org-babel-tangle :append :local)
+                      (add-hook 'org-babel-after-execute-hook #'display-ansi-colors)))
   :hook (org-mode . (lambda ()
                       (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
                       (set-face-attribute 'org-link nil :inherit 'fixed-pitch)
@@ -371,6 +447,7 @@
                       (mixed-pitch-mode t)
                       (variable-pitch-mode t)))
   :bind (:map org-mode-map
+              ("C-c a" . org-agenda)
               ("C-c b" . org-back-to-heading)
               ("C-c p" . org-display-outline-path))
   :config
@@ -404,10 +481,10 @@
         org-hide-emphasis-markers t
         org-pretty-entities t
         org-ellipsis "…")
-  
+
   (setq org-startup-indented t
         org-startup-folded t)
-  
+
   (setq org-src-fontify-natively t
         org-src-tab-acts-natively t
         org-confirm-babel-evaluate nil
@@ -425,6 +502,7 @@
   (global-set-key "\C-cl" 'org-store-link)
   (global-set-key "\C-ca" 'org-agenda)
   )
+
 ;;; load this early
 (use-package org-appear
   :straight t
@@ -457,6 +535,23 @@
   :hook (after-init . (lambda ()
                         (solaire-global-mode +1))))
 
+(use-package org-modern
+  :straight t
+  :hook (org-mode . org-modern-mode)
+  :config
+  (setq org-modern-table t)
+  (setq org-modern-star '("◉" "○" "✸" "✿" "✤" "✜" "◆" "▶")))
+
+(use-package ox-clip
+  :straight t
+  :after org
+  :config
+  (setq org-hugo-front-matter-format "yaml"))
+
+(use-package ox-hugo
+  :straight t
+  :after org)
+
 (use-package guru-mode
   :straight t
   :delight
@@ -486,12 +581,6 @@
 (use-package org-indent
   :after org
   :hook (org-mode . org-indent-mode))
-
-(use-package org-modern
-  :straight t
-  :hook (org-mode . org-modern-mode)
-  :config
-  (setq  org-modern-star '("◉" "○" "✸" "✿" "✤" "✜" "◆" "▶")))
 
 (use-package org-rich-yank
   :straight t
@@ -598,6 +687,8 @@
   (define-key vterm-mode-map (kbd "M-y") 'vterm-yank-pop)
   (define-key vterm-mode-map (kbd "M-/") 'vterm-send-tab))
 
+(global-set-key (kbd "C-c ;") #'comment-line)
+
 (use-package xref
   :straight t
   :config
@@ -624,6 +715,30 @@
 (use-package ag
   :straight t)
 
+(use-package wgrep
+  :straight t
+  :commands wgrep-change-to-wgrep-mode
+  :config (setq wgrep-auto-save-buffer t))
+
+(setq completions-format 'one-column) ;; like ido
+(setq completion-styles '(flex basic partial-completion emacs22))
+
+(use-package orderless
+  :straight t
+  :config
+  (add-to-list 'completion-styles 'orderless)
+  (setq orderless-component-separator "[ &]")
+
+  :custom
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+(unless (version< emacs-version "29.0")
+  (setq completion-auto-help 'visible
+        completion-auto-select 'second-tab
+        completion-show-help t
+        completions-sort t
+        completions-header-format nil))
+
 (use-package counsel
   :straight t
   :defer t
@@ -641,6 +756,7 @@
          ("C-c a" . counsel-ag)
          :map ivy-minibuffer-map ("C-r" . counsel-minibuffer-history))
   :config
+  (setq ivy-initial-inputs-alist nil)
   (global-set-key (kbd "M-x") 'counsel-M-x)
   (global-set-key (kbd "C-x C-f") 'counsel-find-file)
   (global-set-key (kbd "C-x l") 'counsel-locate)
@@ -656,6 +772,14 @@
   (counsel-mode t)
   (global-set-key (kbd "M-y") 'counsel-yank-pop))
 
+(use-package flx
+  :straight t
+  :defer t)
+
+(use-package prescient
+  :straight t
+  :config (prescient-persist-mode +1))
+
 (use-package ivy
   :straight t
   :diminish
@@ -663,12 +787,24 @@
   :hook (after-init . ivy-mode) ;; another kludge
   :bind ("C-x b" . ivy-switch-buffer)
   :init
-  (setq ivy-more-chars-alist
-        '((counsel-rg . 1)
-          (counsel-search . 2)
-          (t . 3)))
+  (let ((standard-search-fn
+         #'+ivy-prescient-non-fuzzy)
+        (alt-search-fn
+         #'ivy--regex-fuzzy))
+    (setq ivy-re-builders-alist
+          `((counsel-rg     . ,standard-search-fn)
+            (swiper         . ,standard-search-fn)
+            (swiper-isearch . ,standard-search-fn)
+            (t . ,alt-search-fn)))
+    (setq ivy-more-chars-alist
+          '((counsel-rg . 1)
+            (counsel-search . 2)
+            (t . 3))))
   :config
   (require 'counsel nil t) ;; a kludge
+  (setq ivy-height 17
+        ivy-wrap t
+        ivy-fixed-height-minibuffer t)
   (setq ivy-display-style 'fancy)
   (setq ivy-virtual-abbreviate 'full)
   (setq ivy-fixed-height-minibuffer t)
@@ -683,8 +819,41 @@
   (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
   (ivy-mode t))
 
+;; lots of Doom Emacs hacks
+(use-package ivy-prescient
+  :straight t
+  :commands +ivy-prescient-non-fuzzy
+  :hook (ivy-mode . ivy-prescient-mode)
+  :hook (ivy-prescient-mode . prescient-persist-mode)
+  :init
+  (defun +ivy-prescient-non-fuzzy (str)
+    (let ((prescient-filter-method '(literal regexp)))
+      (ivy-prescient-re-builder str)))
+  (setq prescient-filter-method
+        '(literal regexp initialism fuzzy))
+  :config
+  (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
+  (setq ivy-prescient-sort-commands
+        '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
+               ivy-resume ivy--restore-session counsel-grep counsel-git-grep
+               counsel-rg counsel-ag counsel-ack counsel-fzf counsel-pt counsel-imenu
+               counsel-yank-pop counsel-recentf counsel-buffer-or-recentf
+               counsel-outline counsel-org-goto counsel-jq)
+        ivy-prescient-retain-classic-highlighting t))
+
+(use-package ivy-posframe
+  :straight t
+  :hook (ivy-mode . ivy-posframe-mode)
+  :config
+  (setq ivy-fixed-height-minibuffer nil
+        ivy-posframe-border-width 10
+        ivy-posframe-parameters
+        `((min-width . 90)
+          (min-height . ,ivy-height))))
+
 (use-package ivy-avy
-  :straight t)
+  :straight t
+  :after ivy)
 
 (use-package ivy-rich
   :straight t
@@ -715,7 +884,9 @@
          ("C-r" . swiper-isearch-backward)
          ("M-s s" . swiper)
          ("M-s m" . swiper-multi)
-         ("M-s w" . swiper-thing-at-point)))
+         ("M-s w" . swiper-thing-at-point))
+  :config
+  (setq swiper-action-recenter t))
 
 (use-package helpful
   :straight t
@@ -787,27 +958,6 @@
            company-files)
           (company-abbrev company-dabbrev company-dabbrev-code)
           )))
-
-(use-package prescient
-  :straight t
-  :config (prescient-persist-mode +1))
-
-(use-package ivy-prescient
-  :straight t
-  :hook (ivy-mode . ivy-prescient-mode)
-  :hook (ivy-prescient-mode . prescient-persist-mode)
-  :init
-  (setq prescient-filter-method
-        '(literal regexp initialism fuzzy))
-  :config
-  (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
-  (setq ivy-prescient-sort-commands
-        '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
-               ivy-resume ivy--restore-session counsel-grep counsel-git-grep
-               counsel-rg counsel-ag counsel-ack counsel-fzf counsel-pt counsel-imenu
-               counsel-yank-pop counsel-recentf counsel-buffer-or-recentf
-               counsel-outline counsel-org-goto counsel-jq)
-        ivy-prescient-retain-classic-highlighting t))
 
 (use-package company-prescient
   :straight t
@@ -1177,7 +1327,34 @@
   (global-treesit-auto-mode))
 
 (use-package treesit
-  :defer t)
+  :init
+  (setq-default treesit-font-lock-level 4)
+  :config
+  (when (boundp 'treesit-extra-load-path)
+    (add-to-list 'treesit-extra-load-path "/usr/lib64/")
+    (add-to-list 'treesit-extra-load-path "/usr/local/lib/")
+    (add-to-list 'treesit-extra-load-path "~/.local/lib/"))
+  (dolist (mapping '((python-mode . python-ts-mode)
+                     (css-mode . css-ts-mode)
+                     (typescript-mode . tsx-ts-mode)
+                     (json-mode . json-ts-mode)
+                     (js-mode . js-ts-mode)
+                     (css-mode . css-ts-mode)
+                     (yaml-mode . yaml-ts-mode)))
+    (add-to-list 'major-mode-remap-alist mapping)))
+
+(use-package combobulate
+  :straight '(:host github :repo "mickeynp/combobulate")
+  :preface
+  (setq combobulate-key-prefix "C-c o")
+
+  :hook ((python-ts-mode . combobulate-mode)
+         (js-ts-mode . combobulate-mode)
+         (css-ts-mode . combobulate-mode)
+         (yaml-ts-mode . combobulate-mode)
+         (json-ts-mode . combobulate-mode)
+         (typescript-ts-mode . combobulate-mode)
+         (tsx-ts-mode . combobulate-mode)))
 
 (straight-use-package 'tree-sitter-langs)
 (straight-use-package 'tree-sitter-indent)
@@ -1238,7 +1415,11 @@
   (setq eshell-where-to-jump 'begin
         eshell-review-quick-commands nil
         eshell-smart-space-goes-to-end t)
-  (add-hook 'eshell-mode-hook #'eshell-smart-initialize))
+  (add-hook 'eshell-mode-hook #'eshell-smart-initialize)
+  (add-hook 'eshell-preoutput-filter-functions  'ansi-color-apply))
+
+(global-set-key (kbd "C-c s e") #'eshell)
+(global-set-key (kbd "C-c s t") #'vterm)
 
 (use-package esh-help
   :straight t
@@ -1306,6 +1487,8 @@
                          (elpy-mode t)))
   :interpreter "ipython -i"
   :config
+  (setq python-check-command "ruff")
+  (add-hook 'python-mode-hook #'flymake-mode)
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "-i --simple-prompt"
         python-shell-prompt-detect-failure-warning nil))
