@@ -117,6 +117,114 @@
 (setq whitespace-style '(face spaces tabs newline space-mark tab-mark))
 (global-whitespace-mode t)
 
+(defvar base-prettify-symbols-alist
+  '(("<=" . ?≤)
+    (">=" . ?≥)
+    ("<-" . ?←)
+    ("->" . ?→)
+    ("<=" . ?⇐)
+    ("=>" . ?⇒)
+    ("lambda" . ?λ ))
+  )
+
+;; stolen from Doom
+(defvar +ligatures-extra-symbols
+  '(;; org
+    :name          "»"
+    :src_block     "»"
+    :src_block_end "«"
+    :quote         "“"
+    :quote_end     "”"
+    ;; Functional
+    :lambda        "λ"
+    :def           "ƒ"
+    :composition   "∘"
+    :map           "↦"
+    ;; Types
+    :null          "∅"
+    :true          "𝕋"
+    :false         "𝔽"
+    :int           "ℤ"
+    :float         "ℝ"
+    :str           "𝕊"
+    :bool          "𝔹"
+    :list          "𝕃"
+    ;; Flow
+    :not           "￢"
+    :in            "∈"
+    :not-in        "∉"
+    :and           "∧"
+    :or            "∨"
+    :for           "∀"
+    :some          "∃"
+    :return        "⟼"
+    :yield         "⟻"
+    ;; Other
+    :union         "⋃"
+    :intersect     "∩"
+    :diff          "∖"
+    :tuple         "⨂"
+    :pipe          "<U+E135>" ;; FIXME: find a non-private char
+    :dot           "•")
+  "Maps identifiers to symbols, recognized by `set-ligatures'.")
+
+(defvar extra-prettify-symbols-alist)
+
+;; stolen from Alexandria
+(cl-defun plist-alist (l &optional (acc '()))
+  "stolen from Alexandria"
+  (cond ((null l) (nreverse acc))
+        (t (plist-alist (cddr l) (cons (cons (car l) (cadr l)) acc)))))
+
+;; a systematic, principle-guided way
+(setq extra-prettify-symbols-alist (append (plist-alist
+                                            (mapcar (lambda (s)
+                                                      (cond ((symbolp s) (substring  (symbol-name s) 1 nil))
+                                                            (t s))) +ligatures-extra-symbols))
+                                           base-prettify-symbols-alist))
+
+(defun gas-lisp-prettify-symbols-hook ()
+  "Set pretty symbols for lisp modes."
+  (setq prettify-symbols-alist base-prettify-symbols-alist)
+  (setq prettify-symbols-unprettify-at-point 'right-edge)
+  (prettify-symbols-mode t))
+
+(defun gas-python-prettify-symbols-hook ()
+  "Set pretty symbols for Python."
+  (setq prettify-symbols-alist
+        (append '(("def" . ?ƒ) ("None" . "∅"))
+                extra-prettify-symbols-alist))
+  )
+
+(defun gas-js-prettify-symbols-hook ()
+  "Set pretty symbols for JavaScript."
+  (setq prettify-symbols-alist
+        (append '(("function" . ?ƒ)) extra-prettify-symbols-alist)))
+
+(defun gas-clj-prettify-symbols-hook ()
+  "Set pretty symbols for Clojure(script)."
+  (setq prettify-symbols-alist
+        (append '(("fn" . λ)) extra-prettify-symbols-alist)))
+
+(defun other-prettify-symbols-hook ()
+  "Set pretty symbols for non-lisp programming modes."
+  (setq prettify-symbols-alist
+        (append '(("==" . ?≡)
+                  ("!=" . ?≠)
+                  (":=" . ?⇐)
+                  ("::" . ?∷))
+                extra-prettify-symbols-alist))
+  (setq prettify-symbols-unprettify-at-point 'right-edge)
+  (prettify-symbols-mode t))
+
+;; Hook 'em up.
+(add-hook 'emacs-lisp-mode-hook #'gas-lisp-prettify-symbols-hook)
+;; (add-hook 'python-mode-hook     #'gas-python-prettify-symbols-hook)
+(add-hook 'web-mode-hook        #'other-prettify-symbols-hook)
+(add-hook 'js-mode-hook         #'gas-js-prettify-symbols-hook)
+(add-hook 'prog-mode-hook       #'other-prettify-symbols-hook)
+(add-hook 'clojure-mode-hook    #'gas-clj-prettify-symbols-hook)
+
 (setq prettify-symbols-unprettify-at-point 'right-edge)
 (global-prettify-symbols-mode t)
 
