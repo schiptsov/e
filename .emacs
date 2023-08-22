@@ -347,8 +347,9 @@
    (gfm-mode . mixed-pitch-mode)
    (info-mode . mixed-pitch-mode)
    (nov-mode . mixed-pitch-mode))
-  :config
-  (variable-pitch-mode -1))
+  :hook (mixed-pitch-mode . (lambda ()
+                              (solaire-mode t)
+                              (variable-pitch-mode t))))
 
 ;; Use the latest version
 (straight-use-package 'org)
@@ -364,7 +365,9 @@
                       (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
                       (set-face-attribute 'org-block nil :inherit 'fixed-pitch)
                       (set-face-attribute 'org-date nil :inherit 'fixed-pitch)
-                      (set-face-attribute 'org-special-keyword nil :inherit 'fixed-pitch)
+                      (set-face-attribute 'org-special-keyword nil
+                                          :inherit 'fixed-pitch)
+                      (solaire-mode t)
                       (mixed-pitch-mode t)
                       (variable-pitch-mode t)))
   :bind (:map org-mode-map
@@ -450,8 +453,9 @@
 (use-package solaire-mode
   :straight t
   :hook (mixed-pitch-mode .  solaire-mode-reset)
-  :config
-  (solaire-global-mode +1))
+  :hook (prog-mode . solaire-mode-reset)
+  :hook (after-init .(lambda ()
+                       (solaire-global-mode +1))))
 
 (use-package guru-mode
   :straight t
