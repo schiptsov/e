@@ -227,13 +227,15 @@
 
 (use-package doom-themes
   :straight t
+  :hook (after-init . (lambda ()
+                        (load-theme 'doom-nord t)))
   :hook (org-mode . (lambda ()
                       (require 'doom-themes-ext-org)
                       (doom-themes-org-config)))
-  :config
-  ;; Global settings (defaults)
+  :init
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
-        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally
+  :config
   (load-theme 'doom-nord t))
 
 (use-package guru-mode
@@ -440,6 +442,7 @@
 
 (use-package counsel
   :straight t
+  :defer t
   :diminish
   :bind (("C-x C-f" . counsel-find-file)
          ("C-x b" . ivy-switch-buffer)
@@ -465,13 +468,15 @@
   (global-set-key (kbd "C-c j") 'counsel-git-grep)
   (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
   (add-to-list 'savehist-additional-variables 'counsel-compile-history)
+  (add-to-list 'ivy-sort-functions-alist '(counsel-imenu))
   (counsel-mode t)
   (global-set-key (kbd "M-y") 'counsel-yank-pop))
 
 (use-package ivy
   :straight t
   :diminish
-  :after counsel
+  ;; :after counsel
+  :hook (after-init . ivy-mode) ;; another kludge
   :bind ("C-x b" . ivy-switch-buffer)
   :init
   (let ((standard-search-fn
@@ -488,7 +493,9 @@
             (counsel-search . 2)
             (t . 3))))
   :config
+  (require 'counsel nil t) ;; a kludge
   (setq ivy-display-style 'fancy)
+  (setq ivy-virtual-abbreviate 'full)
   (setq ivy-fixed-height-minibuffer t)
   (setq ivy-use-virtual-buffers nil)
   (setq enable-recursive-minibuffers t)
@@ -501,16 +508,6 @@
   (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
   (ivy-mode t))
 
-(use-package ivy-prescient
-  :straight t
-  :after iyy
-  :hook (ivy-mode . ivy-prescient-mode)
-  :hook (ivy-prescient-mode . prescient-persist-mode)
-  :init
-  (setq prescient-filter-method
-        '(literal regexp initialism fuzzy))
-  :config (ivy-prescient-mode t))
-
 (use-package ivy-avy
   :straight t
   :after (avy ivy))
@@ -522,8 +519,27 @@
   (setq ivy-rich-path-style 'abbrev
         ivy-virtual-abbreviate 'full)
   :config
+  (setq ivy-rich-parse-remote-buffer nil)
   (ivy-rich-project-root-cache-mode +1)
   (ivy-rich-mode t))
+
+(use-package ivy-prescient
+  :straight t
+  :after iyy
+  :hook (ivy-mode . ivy-prescient-mode)
+  :hook (ivy-prescient-mode . prescient-persist-mode)
+  :init
+  (setq prescient-filter-method
+        '(literal regexp initialism fuzzy))
+  :config
+  (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
+  (setq ivy-prescient-sort-commands
+        '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
+               ivy-resume ivy--restore-session counsel-grep counsel-git-grep
+               counsel-rg counsel-ag counsel-ack counsel-fzf counsel-pt counsel-imenu
+               counsel-yank-pop counsel-recentf counsel-buffer-or-recentf
+               counsel-outline counsel-org-goto counsel-jq)
+        ivy-prescient-retain-classic-highlighting t))
 
 (use-package ivy-xref
   :straight t
@@ -559,6 +575,7 @@
   (global-set-key (kbd "C-h x") #'helpful-command)
   (setq counsel-describe-function-function #'helpful-callable)
   (setq counsel-describe-variable-function #'helpful-variable)
+  (setq counsel-descbinds-function #'helpful-callable)
   (global-set-key (kbd "C-c C-d") #'helpful-at-point)
   (global-set-key (kbd "C-h F") #'helpful-function))
 
@@ -767,15 +784,35 @@
   :config
   (global-aggressive-indent-mode t))
 
+(use-package hl-todo
+  :straight t
+  :hook (prog-mode . hl-todo-mode)
+  :hook (yaml-mode . hl-todo-mode)
+  :config
+  (setq hl-todo-highlight-punctuation ":"
+        hl-todo-keyword-faces
+        '(;; For reminders to change or add something at a later date.
+          ("TODO" warning bold)
+          ("FIXME" error bold)
+          ("REVIEW" font-lock-keyword-face bold)
+          ("HACK" font-lock-constant-face bold)
+          ("DEPRECATED" font-lock-doc-face bold)
+          ("NOTE" success bold)
+          ("BUG" error bold)
+          ("XXX" font-lock-constant-face bold))))
+
 (use-package diff-hl
   :straight t
   :config
+  (setq vc-git-diff-switches '("--histogram"))
+  (setq diff-hl-flydiff-delay 0.5)  ; default: 0.3
+  (setq diff-hl-show-staged-changes nil)
   (global-diff-hl-mode t))
 
-(use-package expand-region
-  :straight t
-  :config
-  (global-set-key (kbd "C-=") 'er/expand-region))
+  (use-package expand-region
+    :straight t
+    :config
+    (global-set-key (kbd "C-=") 'er/expand-region))
 
 (use-package ggtags
   :straight t
@@ -850,19 +887,17 @@
 
 (use-package dired
   :hook (dired-mode . dired-hide-details-mode)
-  :init
+  :config
   (setq dired-dwim-target t
         dired-hide-details-hide-symlink-targets nil
         dired-auto-revert-buffer #'dired-buffer-stale-p
         dired-recursive-copies  'always
         dired-recursive-deletes 'top
-        dired-create-destination-dirs 'ask)
-  :config
-  )
+        dired-create-destination-dirs 'ask))
 
 (use-package dired-async
   :config
-  (dired-async-mode t))
+  :hook (dired-mode . dired-async-mode))
 
 (use-package dired-x
   :hook (dired-mode . dired-omit-mode)
@@ -906,6 +941,7 @@
 
 (use-package magit
   :straight t
+  :defer t
   :hook (magit-post-refresh  . diff-hl-magit-post-refresh)
   :config
   (setq magit-completing-read-function 'ivy-completing-read)
@@ -917,6 +953,10 @@
   (setq magit-revert-buffers 'silent)
   (setq magit-no-confirm '(stage-all-changes unstage-all-changes)))
 
+(use-package git-modes
+  :straight t
+  :after magit)
+
 (use-package ghub
   :straight t
   :defer t
@@ -924,10 +964,7 @@
 
 (use-package forge
   :straight t
-  :after magit)
-
-(use-package git-modes
-  :straight t
+  :defer t
   :after magit)
 
 (use-package orgit
@@ -936,6 +973,7 @@
 
 (use-package orgit-forge
   :straight t
+  :defer t
   :after forge)
 
 (use-package treesit
@@ -1089,9 +1127,9 @@
   :straight t
   :config
   (setq lsp-pyright-disable-language-service nil
-  	    lsp-pyright-disable-organize-imports nil
-  	    lsp-pyright-auto-import-completions t
-  	    lsp-pyright-use-library-code-for-types t))
+        lsp-pyright-disable-organize-imports nil
+        lsp-pyright-auto-import-completions t
+        lsp-pyright-use-library-code-for-types t))
 
 ;;; a comint-mode
 (use-package python
@@ -1132,8 +1170,20 @@
   (setq elpy-rpc-python-command "python3")
   (setq elpy-modules (delq 'elpy-module-flymake elpy-modules)))
 
+(use-package blacken
+  :straight t
+  :hook (python-mode . blacken-mode)
+  :config
+  (setq blacken-line-length '72))
+
+(use-package python-docstring
+  :straight t
+  :hook (python-mode . python-docstring-mode))
+
 (use-package ein
   :straight t
+  :defer t
+  :load-path "lisp"
   :config
   (require 'ob-ein))
 
