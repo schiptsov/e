@@ -1,21 +1,28 @@
 ;;; -*- mode: emacs-lisp; coding: utf-8; -*-
 
+;; use hooks and implicit defers,
+;; not afters and configs
+;; some packages work only as modes in configs
+
 (setq-default load-prefer-newer t)
 
+(setq byte-compile-warnings t)
 (setq native-comp-async-report-warnings-errors nil)
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
+(setq enable-local-variables :all)
 
 ;;(setq-default url-gateway-method 'socks)
 ;;(setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
 ;;(setq-default socks-noproxy '("127.0.0.1"))
 
-;; use hooks and implicit defers, not afters
-
 ;; we use straight.el
 (setq package-enable-at-startup nil)
+(setq package-quickstart nil)
+
+(setq frame-inhibit-implied-resize t)
 
 (setenv "LC_CTYPE" "UTF-8")
 (setenv "LC_ALL" "en_US.UTF-8")
@@ -29,7 +36,13 @@
 (set-default-coding-systems 'utf-8)
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
 (setq default-buffer-file-coding-system 'utf-8)
+
+(setq locale-coding-system 'utf-8
+      coding-system-for-read 'utf-8
+      coding-system-for-write 'utf-8)
+(setq default-process-coding-system '(utf-8-unix . utf-8-unix))
 
 (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))
 
@@ -47,6 +60,10 @@
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
 
+
+(setq straight-use-package-by-default t)
+(setq straight-vc-git-default-clone-depth 1)
+
 ;; use-package will use 'straight
 (straight-use-package '(bind-key :type built-in))
 (straight-use-package '(use-package :type built-in))
@@ -57,8 +74,8 @@
 (setq
  use-package-always-defer nil   ;; should be nil for :defer to work
  use-package-always-ensure t    ;; should be t for straight
- use-package-compute-statistics nil
- use-package-verbose nil)
+ use-package-compute-statistics t
+ use-package-verbose t)
 
 (menu-bar-mode t)
 
@@ -66,8 +83,15 @@
 (scroll-bar-mode -1)
 (fringe-mode -1)
 
-(setq select-enable-clipboard t)
-(setq select-enable-primary t)
+(setq x-underline-at-descent-line t)
+(setq underline-minimum-offset 1)
+
+(setq use-file-dialog nil
+      use-dialog-box nil
+      inhibit-splash-screen t)
+
+(setq select-enable-clipboard t
+      select-enable-primary t)
 
 (add-to-list 'default-frame-alist '(font . "SF Mono Light 16"))
 
@@ -106,6 +130,8 @@
 
 (setq find-file-visit-truename t)
 (setq vc-follow-symlinks t)
+
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (setq-default indent-tabs-mode nil)
 (add-hook 'sh-mode-hook (lambda () (setq indent-tabs-mode t)))
@@ -281,8 +307,11 @@
 (show-paren-mode t)
 (transient-mark-mode t)
 
+;; clashes with spartparens
 (setq-default electric-indent-chars '(?\n ?\^?))
-(electric-pair-mode t)
+(setq electric-pair-preserve-balance t)
+(electric-pair-mode -1)
+
 (electric-indent-mode t)
 
 (delete-selection-mode t)
@@ -301,6 +330,10 @@
 (add-hook 'focus-out-hook #'save-all)
 
 (recentf-mode t)
+(setq recentf-exclude `(,(expand-file-name "straight/build/" user-emacs-directory)
+                          ,(expand-file-name "eln-cache/" user-emacs-directory)
+                          ,(expand-file-name "etc/" user-emacs-directory)
+                          ,(expand-file-name "var/" user-emacs-directory)))
 
 (defun find-recent-file ()
   "Find a file that was recently visted using `completing-read'."
@@ -331,9 +364,15 @@
 
 (add-hook 'compilation-filter-hook #'colorize-compilation-buffer)
 
+(use-package gcmh
+  :straight t
+  :demand t
+  :config
+  (gcmh-mode t))
+
 (use-package auto-compile
   :straight t
-  :defer nil
+  :demand t
   :config (auto-compile-on-load-mode))
 
 (use-package flymake
@@ -403,6 +442,29 @@
   (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
   (global-ligature-mode 't))
 
+(use-package all-the-icons
+  :straight t
+  :demand t)
+
+(use-package all-the-icons-completion
+  :after all-the-icons
+  :init
+  (all-the-icons-completion-mode))
+
+(use-package all-the-icons-ivy
+  :straight t
+  :after ivy
+  :config
+  (setq all-the-icons-ivy-buffer-commands nil)
+  (all-the-icons-ivy-setup))
+
+(use-package emojify
+  :straight t
+  :hook (after-init . global-emojify-mode)
+  :config
+   (setq emojify-styles)
+   (emojify-set-emoji-styles emojify-styles))
+
 (use-package mixed-pitch
   :straight t
   :hook
@@ -431,6 +493,11 @@
 ;; Use the latest version
 (straight-use-package 'org)
 (straight-use-package 'org-contrib)
+
+(straight-use-package 'async)
+(use-package ob-async
+  :straight t
+  :hook (org-load . (lambda () (require 'ob-async))))
 
 (use-package org
   :straight t
@@ -505,7 +572,15 @@
   (global-set-key "\C-cc" 'org-capture)
   (global-set-key "\C-cl" 'org-store-link)
   (global-set-key "\C-ca" 'org-agenda)
-  )
+
+  (setq-local prettify-symbols-alist '(("#+BEGIN_SRC" . "»")
+                                         ("#+END_SRC" . "«")
+                                         ("#+begin_src" . "»")
+                                         ("#+end_src" . "«")
+                                         ("lambda"  . "λ")
+                                         ("->" . "→")
+                                         ("->>" . "↠")))
+  (setq-local prettify-symbols-unprettify-at-point 'right-edge))
 
 ;;; load this early
 (use-package org-appear
@@ -518,6 +593,10 @@
   ;; for proper first-time setup, `org-appear--set-elements'
   ;; needs to be run after other hooks have acted.
   (run-at-time nil nil #'org-appear--set-elements))
+
+(use-package org-fragtog
+  :straight t
+  :hook (org-mode . org-fragtog-mode))
 
 (use-package ef-themes
   :straight t
@@ -549,6 +628,11 @@
   :config
   (setq org-modern-table t)
   (setq org-modern-star '("◉" "○" "✸" "✿" "✤" "✜" "◆" "▶")))
+
+(use-package org-reverse-datetree
+  :straight t
+  :after org
+  :demand)
 
 (use-package ox-clip
   :straight t
@@ -587,6 +671,7 @@
   :commands writeroom-mode)
 
 (use-package org-indent
+  :straight '(:type built-in)
   :after org
   :hook (org-mode . org-indent-mode))
 
@@ -684,6 +769,7 @@
 
 (use-package ox-gfm
   :straight t
+  :commands (org-gfm-export-as-markdown org-gfm-export-to-markdown)
   :after org)
 
 (use-package vterm
@@ -899,14 +985,20 @@
 (use-package helpful
   :straight t
   :after counsel
-  :config
-  (defalias 'describe-function 'helpful-callable)
-  (defalias 'describe-variable 'helpful-variable)
-  (defalias 'describe-key 'helpful-key)
-  ;;(global-set-key (kbd "C-h f") #'helpful-callable)
-  ;;(global-set-key (kbd "C-h v") #'helpful-variable)
-  (global-set-key (kbd "C-h k") #'helpful-key)
-  (global-set-key (kbd "C-h x") #'helpful-command)
+  :bind
+    ([remap describe-function] . helpful-callable)
+    ([remap describe-command] . helpful-command)
+    ([remap describe-variable] . helpful-variable)
+    ([remap describe-key] . helpful-key)
+    :config
+    (defalias 'describe-function 'helpful-callable)
+    (defalias 'describe-command 'helpful-command)
+    (defalias 'describe-variable 'helpful-variable)
+    (defalias 'describe-key 'helpful-key)
+    ;; (global-set-key (kbd "C-h f") #'helpful-callable)
+    ;; (global-set-key (kbd "C-h v") #'helpful-variable)
+    ;; (global-set-key (kbd "C-h k") #'helpful-key)
+    ;; (global-set-key (kbd "C-h x") #'helpful-command)
   (setq counsel-describe-function-function #'helpful-callable)
   (setq counsel-describe-variable-function #'helpful-variable)
   (setq counsel-descbinds-function #'helpful-callable)
@@ -927,9 +1019,9 @@
 (use-package smartparens
   :straight t
   :diminish
-  :hook (prog-mode . turn-on-smartparens-mode)
+  :hook (prog-mode . turn-on-smartparens-strict-mode)
   :init
-  (smartparens-global-mode t)
+  (smartparens-global-strict-mode t)
   :config
   (require 'smartparens-config))
 
@@ -1137,7 +1229,7 @@
 
 (use-package hl-todo
   :straight t
-  :hook (prog-mode . hl-todo-mode)
+  :hook ((org-mode prog-mode) . hl-todo-mode)
   :hook (yaml-mode . hl-todo-mode)
   :config
   (setq hl-todo-highlight-punctuation ":"
@@ -1187,6 +1279,7 @@
   :init (setq highlight-indent-guides-method 'character))
 
 (use-package emacs-lisp-mode
+  :straight '(:type built-in)
   :defer t
   :hook (emacs-lisp-mode . ggtags-mode)
   :hook (emacs-lisp-mode . semantic-mode)
@@ -1223,6 +1316,7 @@
   :hook (emacs-lisp-mode . eval-sexp-fu-flash-mode))
 
 (use-package ielm
+  :straight '(:type built-in)
   :defer t
   :hook (ielm-mode . smartparens-strict-mode)
   :hook (ielm-mode . rainbow-delimiters-mode)
@@ -1230,15 +1324,8 @@
   :hook (ielm-mode . highlight-quoted-mode)
   :hook (ielm-mode . highlight-numbers-mode))
 
-(straight-use-package 'async)
-(straight-use-package 'ob-async)
-(straight-use-package 'ob-rust)
-(straight-use-package 'ob-sml)
-(use-package ob-erlang
-  :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
-  :defer t)
-
 (use-package dired
+  :straight '(:type built-in)
   :hook (dired-mode . dired-hide-details-mode)
   :config
   (setq dired-dwim-target t
@@ -1249,10 +1336,12 @@
         dired-create-destination-dirs 'ask))
 
 (use-package dired-async
+  :straight '(:type built-in)
   :config
   :hook (dired-mode . dired-async-mode))
 
 (use-package dired-x
+  :straight '(:type built-in)
   :hook (dired-mode . dired-omit-mode)
   :commands (dired-jump
              dired-jump-other-window
@@ -1270,6 +1359,7 @@
   )
 
 (use-package dired-aux
+  :straight '(:type built-in)
   :defer t
   :config
   (setq dired-create-destination-dirs 'ask
@@ -1335,6 +1425,7 @@
   (global-treesit-auto-mode))
 
 (use-package treesit
+  :straight '(:type built-in)
   :init
   (setq-default treesit-font-lock-level 4)
   :config
@@ -1389,6 +1480,7 @@
 ;;; When /not in a rush/, this is a /principle-guided/ way.
 
 (use-package eshell
+  :straight '(:type built-in)
   :defer t
   :after company
   :hook (eshell-mode .  smartparens-strict-mode)
@@ -1488,6 +1580,7 @@
 
 ;;; a comint-mode
 (use-package python
+  :straight '(:type built-in)
   :defer t
   :hook (python-mode . (lambda ()
                          (semantic-mode t)
@@ -1559,6 +1652,15 @@
   :straight t
   :mode "\\.rs\\'")
 
+(straight-use-package 'ob-rust)
+(straight-use-package 'ob-sml)
+(use-package ob-erlang
+  :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
+  :defer t)
+
+(use-package ob-ein
+  :straight (:type built-in))
+
 (org-babel-do-load-languages
  'org-babel-load-languages
  '(
@@ -1575,5 +1677,5 @@
    (haskell . t)
    (sml . t)
    (erlang . t)
-   (ein. t)
+   (ein . t)
    ))
