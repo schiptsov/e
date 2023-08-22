@@ -225,6 +225,104 @@
   (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
   (global-ligature-mode 't))
 
+(use-package mixed-pitch
+  :straight t
+  :hook
+  ((text-mode . mixed-pitch-mode)
+   (help-mode . mixed-pitch-mode)
+   (org-mode . mixed-pitch-mode)
+   (latex-mode . mixed-pitch-mode)
+   (markdown-mode . mixed-pitch-mode)
+   (gfm-mode . mixed-pitch-mode)
+   (info-mode . mixed-pitch-mode)
+   (nov-mode . mixed-pitch-mode))
+  :config
+  (variable-pitch-mode -1))
+
+;; Use the latest version
+(straight-use-package 'org)
+(straight-use-package 'org-contrib)
+
+(use-package org
+  :straight t
+  :custom
+  (org-src-tab-acts-natively t)
+  :hook (org-mode . (lambda ()
+                      (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+                      (set-face-attribute 'org-link nil :inherit 'fixed-pitch)
+                      (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
+                      (set-face-attribute 'org-block nil :inherit 'fixed-pitch)
+                      (set-face-attribute 'org-date nil :inherit 'fixed-pitch)
+                      (set-face-attribute 'org-special-keyword nil :inherit 'fixed-pitch)
+                      (mixed-pitch-mode t)
+                      (variable-pitch-mode t)))
+  :bind (:map org-mode-map
+              ("C-c b" . org-back-to-heading)
+              ("C-c p" . org-display-outline-path))
+  :config
+  (require 'xdg)
+  (setq org-export-coding-system 'utf-8-unix)
+  (setq org-html-coding-system 'utf-8-unix)
+  (setq org-ascii-charset 'utf-8)
+
+  (setq org-use-property-inheritance t)
+
+  (setq org-export-with-sub-superscripts '{})
+
+  (setq org-inline-src-prettify-results '("⟨" . "⟩"))
+
+  (setq org-directory (expand-file-name "org" (xdg-data-home)))
+  (setq  org-agenda-files (list org-directory))
+
+  (setq org-default-notes-file (expand-file-name "~/NOTES.org"))
+
+  (setq org-export-headline-levels 5) ; I like nesting
+
+  (setq org-refile-use-outline-path 'file)
+
+  (setq org-reverse-note-order t)
+
+  (setq org-catch-invisible-edits 'show-and-error
+        org-completion-use-ido t
+        org-special-ctrl-a/e t
+        org-special-ctrl-k t
+        org-insert-heading-respect-content t
+        org-hide-emphasis-markers t
+        org-pretty-entities t
+        org-ellipsis "…")
+  
+  (setq org-startup-indented t
+        org-startup-folded t)
+  
+  (setq org-src-fontify-natively t
+        org-src-tab-acts-natively t
+        org-confirm-babel-evaluate nil
+        org-edit-src-content-indentation 2
+        org-use-property-inheritance t
+        org-list-allow-alphabetical t
+        org-export-in-background t)
+
+  (setq org-fontify-done-headline t)
+
+  (bind-key "C-c k" 'org-cut-subtree org-mode-map)
+  (setq org-yank-adjusted-subtrees t)
+
+  (global-set-key "\C-cc" 'org-capture)
+  (global-set-key "\C-cl" 'org-store-link)
+  (global-set-key "\C-ca" 'org-agenda)
+  )
+;;; load this early
+(use-package org-appear
+  :straight t
+  :hook (org-mode . org-appear-mode)
+  :config
+  (setq org-appear-autoemphasis t
+        org-appear-autosubmarkers t
+        org-appear-autolinks t)
+  ;; for proper first-time setup, `org-appear--set-elements'
+  ;; needs to be run after other hooks have acted.
+  (run-at-time nil nil #'org-appear--set-elements))
+
 (use-package doom-themes
   :straight t
   :hook (after-init . (lambda ()
@@ -237,6 +335,12 @@
         doom-themes-enable-italic t) ; if nil, italics is universally
   :config
   (load-theme 'doom-nord t))
+
+(use-package solaire-mode
+  :straight t
+  :hook (mixed-pitch-mode .  solaire-mode-reset)
+  :config
+  (solaire-global-mode +1))
 
 (use-package guru-mode
   :straight t
@@ -264,16 +368,18 @@
   :straight t
   :commands writeroom-mode)
 
-;; Use the latest version
-(straight-use-package 'org)
-
 (use-package org-indent
   :after org
   :hook (org-mode . org-indent-mode))
 
+(use-package org-modern
+  :straight t
+  :hook (org-mode . org-modern-mode)
+  :config
+  (setq  org-modern-star '("◉" "○" "✸" "✿" "✤" "✜" "◆" "▶")))
+
 (use-package org-rich-yank
   :straight t
-  :after org
   :bind (:map org-mode-map
               ("C-M-y" . org-rich-yank)))
 
@@ -288,25 +394,6 @@
 (use-package org-web-tools
   :straight t
   :after org)
-
-(use-package org-appear
-  :straight t
-  :after org
-  :hook (org-mode . org-appear-mode)
-  :config
-  (setq org-appear-autoemphasis t
-        org-appear-autosubmarkers t
-        org-appear-autolinks t)
-  ;; for proper first-time setup, `org-appear--set-elements'
-  ;; needs to be run after other hooks have acted.
-  (run-at-time nil nil #'org-appear--set-elements))
-
-(use-package org-modern
-  :straight t
-  :after  org
-  :hook (org-mode . org-modern-mode)
-  :config
-  (setq  org-modern-star '("◉" "○" "✸" "✿" "✤" "✜" "◆" "▶")))
 
 (use-package idle-org-agenda
   :after org-agenda
@@ -335,20 +422,6 @@
   :config
   (setq select-enable-primary t)
   (xclip-mode t))
-
-(use-package mixed-pitch
-  :straight t
-  :hook
-  ((text-mode . mixed-pitch-mode)
-   (help-mode . mixed-pitch-mode)
-   (org-mode . mixed-pitch-mode)
-   (latex-mode . mixed-pitch-mode)
-   (markdown-mode . mixed-pitch-mode)
-   (gfm-mode . mixed-pitch-mode)
-   (info-mode . mixed-pitch-mode)
-   (nov-mode . mixed-pitch-mode))
-  :config
-  (variable-pitch-mode -1))
 
 (use-package pdf-tools
   :straight t
