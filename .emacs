@@ -921,7 +921,7 @@
   :commands wgrep-change-to-wgrep-mode
   :config
   (define-key grep-mode-map (kbd "w") 'wgrep-change-to-wgrep-mode)
-  (setq wgrep-auto-save-buffer))
+  (setq wgrep-auto-save-buffer t))
 
 (setq completions-format 'one-column) ;; like ido
 (setq completion-styles '(flex basic partial-completion emacs22))
