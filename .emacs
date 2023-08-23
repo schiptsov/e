@@ -845,34 +845,34 @@
   :straight (xwwp :type git :host github :repo "canatella/xwwp")
   :commands (xwwp)
   :custom
-   (setq xwwp-follow-link-completion-system 'ivy))
+  (setq xwwp-follow-link-completion-system 'ivy))
 
- (defun google-suggest ()
-     "Search `w3m-search-default-engine' with google completion canditates."
-     (interactive)
-     (w3m-search w3m-search-default-engine
-		 (completing-read  "Google search: "
-				   (dynamic-completion-table
-				   'google-suggest-aux))))
+(defun google-suggest ()
+  "Search `w3m-search-default-engine' with google completion canditates."
+  (interactive)
+  (w3m-search w3m-search-default-engine
+              (completing-read  "Google search: "
+                                (dynamic-completion-table
+                                 'google-suggest-aux))))
 
 (defun google-suggest-aux (input)
-     (with-temp-buffer
-       (insert
-	(shell-command-to-string
-	 (format "w3m -dump_source %s"
-		 (shell-quote-argument
-		  (format
-		   "http://www.google.com/complete/search?hl=en&js=true&qu=%s"
-		   input)))))
-       (read
-	(replace-regexp-in-string "," ""
-				  (progn
-				    (goto-char (point-min))
-				    (re-search-forward "\(" (point-max) t 2)
-				    (backward-char 1)
-				    (forward-sexp)
-				    (buffer-substring-no-properties
-				     (1- (match-end 0)) (point)))))))
+  (with-temp-buffer
+    (insert
+     (shell-command-to-string
+      (format "w3m -dump_source %s"
+              (shell-quote-argument
+               (format
+                "http://www.google.com/complete/search?hl=en&js=true&qu=%s"
+                input)))))
+    (read
+     (replace-regexp-in-string "," ""
+                               (progn
+                                 (goto-char (point-min))
+                                 (re-search-forward "\(" (point-max) t 2)
+                                 (backward-char 1)
+                                 (forward-sexp)
+                                 (buffer-substring-no-properties
+                                  (1- (match-end 0)) (point)))))))
 
 (use-package google-this
   :straight t
@@ -951,11 +951,12 @@
   (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
 
 (use-package ibuffer-projectile
-  :straihgt t)
+  :straight t)
 
+;; will be loaded by ivy
 (use-package flx
   :straight t
-  :demand t)
+  :defer t)
 
 (use-package prescient
   :straight t
@@ -1668,6 +1669,42 @@
 
 (straight-use-package 'tree-sitter-langs)
 (straight-use-package 'tree-sitter-indent)
+
+(defun auto-configure-treesitter ()
+  "Find and configure installed grammars, remap to matching -ts-modes if present.
+Return a list of languages seen along the way."
+  (let ((grammar-name-to-emacs-lang '(("emacs-lisp". "elisp")
+                                      ("c-sharp" . "csharp")
+                                      ("cpp" . "c++")
+                                      ("gomod" . "go-mod")
+                                      ("javascript" . "js")))
+        seen-grammars)
+    (dolist (dir (cons (expand-file-name "tree-sitter" user-emacs-directory)
+                       treesit-extra-load-path))
+      (when (file-directory-p dir)
+        (dolist (file (directory-files dir))
+          (let ((fname (file-name-sans-extension (file-name-nondirectory file))))
+            (when (string-match "libtree-sitter-\\(.*\\)" fname)
+              (let* ((file-lang (match-string 1 fname))
+                     (emacs-lang (or (cdr (assoc-string file-lang grammar-name-to-emacs-lang)) file-lang)))
+                ;; Override library if its filename doesn't match the Emacs name
+                (unless (or (memq (intern emacs-lang) seen-grammars)
+                            (string-equal file-lang emacs-lang))
+                  (let ((libname (concat "tree_sitter_" (replace-regexp-in-string "-" "_" file-lang))))
+                    (add-to-list 'treesit-load-name-override-list
+                                 (list (intern emacs-lang) fname libname))))
+                ;; If there's a corresponding -ts mode, remap the standard mode to it
+                (let ((ts-mode-name (intern (concat emacs-lang "-ts-mode")))
+                      (regular-mode-name (intern (concat emacs-lang "-mode"))))
+                  (when (fboundp ts-mode-name)
+                    (add-to-list 'major-mode-remap-alist
+                                 (cons regular-mode-name ts-mode-name))))
+                ;; Remember we saw this language so we don't squash its config when we
+                ;; find another lib later in the treesit load path
+                (push (intern emacs-lang) seen-grammars)))))))
+    seen-grammars))
+
+(auto-configure-treesitter)
 
 (use-package tree-sitter
   :straight t
