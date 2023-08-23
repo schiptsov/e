@@ -1454,6 +1454,10 @@
         counsel-gtags-auto-update t)
   :hook (ggtags-mode . counsel-gtags-mode))
 
+(use-package volatile-highlights
+  :straight t
+  :hook (adter-init . volatile-highlights-mode))
+
 (use-package  highlight-indent-guides
   :straight t
   :diminish
