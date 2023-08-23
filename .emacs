@@ -373,7 +373,7 @@
 
 (use-package gcmh
   :straight t
-  :demand t
+  :demand "GCMH"
   :diminish t
   :config
   (gcmh-mode t))
@@ -618,18 +618,6 @@
                                          ("->>" . "↠")))
   (setq-local prettify-symbols-unprettify-at-point 'right-edge))
 
-;;; load this early
-(use-package org-appear
-  :straight t
-  :hook (org-mode . org-appear-mode)
-  :config
-  (setq org-appear-autoemphasis t
-        org-appear-autosubmarkers t
-        org-appear-autolinks t)
-  ;; for proper first-time setup, `org-appear--set-elements'
-  ;; needs to be run after other hooks have acted.
-  (run-at-time nil nil #'org-appear--set-elements))
-
 (use-package org-fragtog
   :straight t
   :hook (org-mode . org-fragtog-mode))
@@ -669,6 +657,17 @@
   :straight t
   :after org
   :demand)
+
+(use-package org-appear
+  :straight t
+  :hook (org-mode . org-appear-mode)
+  :config
+  (setq org-appear-autoemphasis t
+        org-appear-autosubmarkers t
+        org-appear-autolinks t)
+  ;; for proper first-time setup, `org-appear--set-elements'
+  ;; needs to be run after other hooks have acted.
+  (run-at-time nil nil #'org-appear--set-elements))
 
 (use-package ox-clip
   :straight t
@@ -876,7 +875,7 @@
 
 (use-package google-this
   :straight t
-  :diminish t
+  :diminish "Google"
   :config
   (google-this-mode 1))
 
@@ -1457,7 +1456,7 @@
 
 (use-package volatile-highlights
   :straight t
-  :hook (adter-init . volatile-highlights-mode))
+  :hook (after-init . volatile-highlights-mode))
 
 (use-package  highlight-indent-guides
   :straight t
@@ -1468,6 +1467,7 @@
 
 (use-package auto-highlight-symbol
   :straight t
+  :diminish "HSA"
   :commands (ahs-highlight-p)
   :hook (prog-mode . auto-highlight-symbol-mode)
   :config
@@ -1482,9 +1482,14 @@
 (use-package emacs-lisp-mode
   :straight '(:type built-in)
   :defer t
-  :hook (emacs-lisp-mode . ggtags-mode)
-  :hook (emacs-lisp-mode . semantic-mode)
-  :hook (emacs-lisp-mode . auto-compile-mode)
+  :hook (emacs-lisp-mode . (lambda ()
+                             (electric-pair-mode -1)
+                             (electric-spacing-mode -1)
+                             (semantic-mode t)
+                             (auto-compile-mode t)
+                             (ggtags-mode t)
+                             ))
+
   :config
   (with-eval-after-load 'semantic
     (semantic-default-emacs-lisp-setup)))
@@ -1521,6 +1526,7 @@
   :hook (ielm-mode . highlight-quoted-mode)
   :hook (ielm-mode . highlight-numbers-mode))
 
+;; https://github.com/Fuco1/dired-hacks
 (use-package dired
   :straight '(:type built-in)
   :hook (dired-mode . dired-hide-details-mode)
@@ -1531,6 +1537,13 @@
         dired-recursive-copies  'always
         dired-recursive-deletes 'top
         dired-create-destination-dirs 'ask))
+
+(use-package dired-aux
+  :straight '(:type built-in)
+  :defer t
+  :config
+  (setq dired-create-destination-dirs 'ask
+        dired-vc-rename-file t))
 
 (use-package dired-async
   :straight '(:type built-in)
@@ -1561,19 +1574,11 @@
   :hook (dired-mode . dired-hide-dotfiles-mode))
 
 (use-package dired-gitignore
- :straight '(:type git :host github :repo "johannes-mueller/dired-gitignore.el")
- :hook (dired-mode . dired-gitignore-mode))
-
-(use-package dired-aux
-  :straight '(:type built-in)
-  :defer t
-  :config
-  (setq dired-create-destination-dirs 'ask
-        dired-vc-rename-file t))
+  :straight '(:type git :host github :repo "johannes-mueller/dired-gitignore.el")
+  :hook (dired-mode . dired-gitignore-mode))
 
 (use-package fd-dired
   :straight t
-  :defer t
   :init
   (global-set-key [remap find-dired] #'fd-dired))
 
@@ -1590,10 +1595,13 @@
 
 (use-package all-the-icons-dired
   :straight t
+  :diminish t
   :if (display-graphic-p)
   :hook (dired-mode . (lambda () (interactive)
                         (unless (file-remote-p default-directory)
-                          (all-the-icons-dired-mode)))))
+                          (all-the-icons-dired-mode))))
+  :custom
+  (all-the-icons-scale-factor 1.0))
 
 (use-package magit
   :straight t
