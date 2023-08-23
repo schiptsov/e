@@ -300,11 +300,17 @@
 (set-fill-column 72)
 (auto-fill-mode t)
 
+;; yet another cool hack
 (when (executable-find "rg")
-  (setq grep-program "rg"))
+  (setq grep-program "rg")
+  (grep-apply-setting
+   'grep-find-command
+   '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27)))
 
 (when (executable-find "fd")
   (setq find-program "fd"))
+
+(global-set-key (kbd "C-x C-g") 'grep-find)
 
 (when (executable-find "aspell")
   (setq ispell-program-name "aspell"))
@@ -884,6 +890,14 @@
 
 (use-package ag
   :straight t)
+
+(use-package ripgrep
+  :straight t
+  :defer t)
+
+(use-package deadgrep
+  :straight t
+  :defer t)
 
 (use-package wgrep
   :straight t
