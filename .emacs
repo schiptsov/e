@@ -300,6 +300,9 @@
 (set-fill-column 72)
 (auto-fill-mode t)
 
+(setq-default grep-highlight-matches t
+              grep-scroll-output t)
+
 ;; yet another cool hack
 (when (executable-find "rg")
   (require 'grep)
@@ -368,22 +371,36 @@
 (global-set-key (kbd "C-x C-p") 'previous-buffer)  ; Overrides `mark-page'
 (global-set-key (kbd "C-x C-n") 'next-buffer)      ; Overrides `set-goal-column'
 
-(setq compilation-scroll-output t)
-
-(defun colorize-compilation-buffer ()
-  "Enable colors in the *compilation* buffer."
-  (require 'ansi-color)
-  (let ((inhibit-read-only t))
-    (ansi-color-apply-on-region (point-min) (point-max))))
-
-(add-hook 'compilation-filter-hook #'colorize-compilation-buffer)
-
 (use-package gcmh
   :straight t
   :demand t
   :diminish t
   :config
   (gcmh-mode t))
+
+;; (defun colorize-compilation-buffer ()
+;;   "Enable colors in the *compilation* buffer."
+;;   (require 'ansi-color)
+;;   (let ((inhibit-read-only t))
+;;     (ansi-color-apply-on-region (point-min) (point-max))))
+;; (add-hook 'compilation-filter-hook #'colorize-compilation-buffer)
+
+(setq-default compilation-scroll-output t)
+
+(defun shell-command-in-view-mode (start end command &optional output-buffer replace &rest other-args)
+  "Put \"*Shell Command Output*\" buffers into view-mode."
+  (unless (or output-buffer replace)
+    (with-current-buffer "*Shell Command Output*"
+      (view-mode 1))))
+(advice-add 'shell-command-on-region :after 'shell-command-in-view-mode)
+
+(with-eval-after-load 'compile
+  (require 'ansi-color)
+  (defun colourise-compilation-buffer ()
+    "Enable colors in the *compilation* buffer."
+    (when (eq major-mode 'compilation-mode)
+      (ansi-color-apply-on-region compilation-filter-start (point-max))))
+  (add-hook 'compilation-filter-hook 'colourise-compilation-buffer))
 
 (use-package auto-compile
   :straight t
@@ -902,7 +919,9 @@
 (use-package wgrep
   :straight t
   :commands wgrep-change-to-wgrep-mode
-  :config (setq wgrep-auto-save-buffer t))
+  :config
+  (define-key grep-mode-map (kbd "w") 'wgrep-change-to-wgrep-mode)
+  (setq wgrep-auto-save-buffer))
 
 (setq completions-format 'one-column) ;; like ido
 (setq completion-styles '(flex basic partial-completion emacs22))
@@ -923,13 +942,24 @@
         completions-sort t
         completions-header-format nil))
 
+(use-package projectile
+  :straight t
+  :init
+  (setq-default projectile-generic-command "rg --files --hidden -0")
+  :hook (after-init . projectile-mode)
+  :config
+  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
+
+(use-package ibuffer-projectile
+  :straihgt t)
+
 (use-package flx
   :straight t
-  :defer t)
+  :demand t)
 
 (use-package prescient
   :straight t
-  :defer t
+  :demand t
   :config (prescient-persist-mode +1))
 
 (use-package ivy
@@ -1025,6 +1055,9 @@
   (add-to-list 'ivy-sort-functions-alist '(counsel-imenu))
   (counsel-mode t)
   (global-set-key (kbd "M-y") 'counsel-yank-pop))
+
+(use-package counsel-projectile
+  :straight t)
 
 (use-package counsel-web
   :straight t
@@ -1300,9 +1333,6 @@
   (global-set-key (kbd "C-c C-y s")   #'aya-persist-snippet)
   (global-set-key (kbd "C-c C-y o")   #'aya-open-line))
 
-(straight-use-package 'projectile)
-(straight-use-package 'counsel-projectile)
-
 (use-package lsp-mode
   :straight t
   :diminish
@@ -1357,7 +1387,7 @@
                             (setq indicate-empty-lines t)
                             (set-fill-column 72)
                             (auto-fill-mode t)
-                            (electric-pair-mode t)
+                            (electric-pair-mode -1)
                             (electric-indent-mode t)
                             (abbrev-mode t)
                             (rainbow-delimiters-mode t)))
@@ -1431,6 +1461,19 @@
   :hook (after-init . highlight-indent-guides-auto-set-faces)
   :init (setq highlight-indent-guides-method 'character))
 
+(use-package auto-highlight-symbol
+  :straight t
+  :commands (ahs-highlight-p)
+  :hook (prog-mode . auto-highlight-symbol-mode)
+  :config
+  (setq ahs-case-fold-search nil
+        ahs-default-range 'ahs-range-whole-buffer
+        ahs-idle-interval 3.75))
+
+(use-package highlight-numbers
+  :straight t
+  :hook (prog-mode . highlight-numbers-mode))
+
 (use-package emacs-lisp-mode
   :straight '(:type built-in)
   :defer t
@@ -1444,10 +1487,6 @@
 (use-package highlight-quoted
   :straight t
   :hook (emacs-lisp-mode . highlight-quoted-mode))
-
-(use-package highlight-numbers
-  :straight t
-  :hook (emacs-lisp-mode . highlight-numbers-mode))
 
 (use-package elisp-def
   :straight t
