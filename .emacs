@@ -740,6 +740,7 @@
   :straight t
   :defer t
   :init
+  (setq markdown-command "multimarkdown")
   (setq markdown-enable-math t
         markdown-enable-wiki-links t
         markdown-italic-underscore t
@@ -774,12 +775,24 @@
 
 (use-package vterm
   :straight t
+  :hook (vterm-mode . yas-minor-mode)
   :commands (vterm vterm-other-window)
   :config
   (define-key vterm-mode-map (kbd "M-n") 'vterm-send-down)
   (define-key vterm-mode-map (kbd "M-p") 'vterm-send-up)
   (define-key vterm-mode-map (kbd "M-y") 'vterm-yank-pop)
   (define-key vterm-mode-map (kbd "M-/") 'vterm-send-tab))
+
+(use-package xwwp
+  :straight (xwwp :type git :host github :repo "canatella/xwwp")
+  :commands (xwwp)
+  :custom
+   (setq xwwp-follow-link-completion-system 'ivy))
+
+(use-package google-this
+  :straight t
+  :config
+  (google-this-mode 1))
 
 (global-set-key (kbd "C-c ;") #'comment-line)
 
@@ -1165,6 +1178,9 @@
   :hook (lsp-completion-mode . (lambda ()
                                  (remq 'company-capf company-backends)))
   :init
+  (setq lsp-modeline-diagnostics-enable nil)
+  (setq lsp-keep-workspace-alive nil)
+  (setq lsp-auto-execute-action nil)
   (setq lsp-enable-folding nil)
   (setq lsp-enable-on-type-formatting t)
   (setq lsp-headerline-breadcrumb-enable t)
@@ -1186,14 +1202,16 @@
         lsp-ui-doc-max-height 8
         lsp-ui-doc-max-width 72         ; 150 (default) is too wide
         lsp-ui-doc-delay 0.75           ; 0.2 (default) is too naggy
-        lsp-ui-doc-show-with-mouse nil  ; don't disappear on mouseover
         lsp-ui-doc-position 'at-point
         lsp-ui-sideline-ignore-duplicate t)
+  (setq lsp-ui-doc-show-with-cursor t)
+  (setq lsp-ui-doc-show-with-mouse nil)
+  (setq lsp-ui-peek-always-show t)
+  (setq lsp-ui-peek-fontify 'always)
   (setq lsp-modeline-code-actions-enable nil)
   (setq lsp-ui-sideline-enable nil)
   (setq lsp-ui-sideline-show-hover t)
   (setq lsp-enable-symbol-highlighting t)
-  (setq lsp-ui-peek-always-show t)
   (setq lsp-ui-doc-enable t)
   (setq lsp-eldoc-enable-hover t)
   (setq lsp-ui-doc-show-with-cursor t))
@@ -1246,6 +1264,9 @@
 
 (use-package diff-hl
   :straight t
+  :hook
+  ((magit-pre-refresh . diff-hl-magit-pre-refresh)
+   (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   (setq vc-git-diff-switches '("--histogram"))
   (setq diff-hl-flydiff-delay 0.5)  ; default: 0.3
@@ -1355,8 +1376,13 @@
                 "\\|^\\.\\(?:svn\\|git\\)\\'"
                 "\\|^\\.ccls-cache\\'"
                 "\\|\\(?:\\.js\\)?\\.meta\\'"
-                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
+                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"
+                "^\\.[^.]\\|$Rhistory\\|$RData\\|__pycache__"))
   )
+
+(use-package dired-hide-dotfiles
+  :straight t
+  :hook (dired-mode . dired-hide-dotfiles-mode))
 
 (use-package dired-aux
   :straight '(:type built-in)
@@ -1382,10 +1408,20 @@
 
 (define-key dired-mode-map (kbd "C-x C-k") 'dired-do-delete)
 
+(use-package all-the-icons-dired
+  :straight t
+  :if (display-graphic-p)
+  :hook (dired-mode . (lambda () (interactive)
+                        (unless (file-remote-p default-directory)
+                          (all-the-icons-dired-mode)))))
+
 (use-package magit
   :straight t
   :defer t
   :hook (magit-post-refresh  . diff-hl-magit-post-refresh)
+  :init
+  (setq magit-log-arguments '("--graph" "--decorate" "--color"))
+  (setq git-commit-fill-column 72)
   :config
   (setq magit-completing-read-function 'ivy-completing-read)
   (setq transient-default-level 5)
@@ -1461,14 +1497,13 @@
 (use-package tree-sitter
   :straight t
   :defer t
-  ;; :hook (prog-mode . (lambda ()
-  ;;                      (tree-sitter-mode t)
-  ;;                      (tree-sitter-hl-mode t)
-  ;;                      (tree-sitter-indent-mode t)))
+  :hook (python-mode . (lambda ()
+                         (require 'tree-sitter)
+                         (require 'tree-sitter-langs)
+                         (require 'tree-sitter-hl)
+                         (tree-sitter-indent-mode t)))
   :hook (tree-sitter-after-on . tree-sitter-hl-mode)
   :init
-  (require 'tree-sitter-langs)
-  (require 'tree-sitter-indent)
   :config
   (setq tree-sitter-debug-jump-buttons t
         tree-sitter-debug-highlight-jump-region t)
@@ -1586,7 +1621,7 @@
                          (semantic-mode t)
                          (python-mode t)
                          (elpy-mode t)))
-  :interpreter "ipython -i"
+    :interpreter "ipython -i"
   :config
   (setq python-check-command "ruff")
   (add-hook 'python-mode-hook #'flymake-mode)
