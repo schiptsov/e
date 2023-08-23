@@ -367,6 +367,7 @@
 (use-package gcmh
   :straight t
   :demand t
+  :dininish t
   :config
   (gcmh-mode t))
 
@@ -791,6 +792,7 @@
 
 (use-package google-this
   :straight t
+  :diminish t
   :config
   (google-this-mode 1))
 
@@ -1496,14 +1498,12 @@
 
 (use-package tree-sitter
   :straight t
-  :defer t
-  :hook (python-mode . (lambda ()
+  :hook (prog-mode . (lambda ()
                          (require 'tree-sitter)
                          (require 'tree-sitter-langs)
                          (require 'tree-sitter-hl)
                          (tree-sitter-indent-mode t)))
   :hook (tree-sitter-after-on . tree-sitter-hl-mode)
-  :init
   :config
   (setq tree-sitter-debug-jump-buttons t
         tree-sitter-debug-highlight-jump-region t)
