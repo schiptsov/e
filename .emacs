@@ -535,6 +535,31 @@
   :straight t
   :hook (org-load . (lambda () (require 'ob-async))))
 
+;; load this early
+(straight-use-package 'ob-rust)
+(straight-use-package 'ob-sml)
+(use-package ob-erlang
+  :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
+  :defer t)
+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '(
+   (emacs-lisp . t)
+   (org . t)
+   (shell . t)
+   (awk . t)
+   (scheme . t)
+   (ocaml . t)
+   (python . t)
+   (gnuplot . t)
+   (octave . t)
+   (rust . t)
+   (haskell . t)
+   (sml . t)
+   (erlang . t)
+   ))
+
 (use-package org
   :straight t
   :custom
@@ -555,8 +580,8 @@
                       (variable-pitch-mode t)))
   :bind (:map org-mode-map
               ("C-c a" . org-agenda)
-              ("C-c b" . org-back-to-heading)
-              ("C-c p" . org-display-outline-path))
+              ("C-c o b" . org-back-to-heading)
+              ("C-c o p" . org-display-outline-path))
   :config
   (require 'xdg)
   (setq org-export-coding-system 'utf-8-unix)
@@ -938,7 +963,7 @@
   (setq completion-auto-help 'visible
         completion-auto-select 'second-tab
         completion-show-help t
-        completions-sort t
+        completions-sort nil
         completions-header-format nil))
 
 (use-package projectile
@@ -956,11 +981,6 @@
 (use-package flx
   :straight t
   :defer t)
-
-(use-package prescient
-  :straight t
-  :demand t
-  :config (prescient-persist-mode +1))
 
 (use-package ivy
   :straight t
@@ -1000,6 +1020,11 @@
   (ivy-set-occur 'swiper-isearch 'swiper-occur)
   (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
   (ivy-mode t))
+
+(use-package prescient
+  :straight t
+  :demand t
+  :config (prescient-persist-mode +1))
 
 ;; lots of Doom Emacs hacks. a nasty bug with :init instead of :config
 (use-package ivy-prescient
@@ -1897,7 +1922,10 @@ Return a list of languages seen along the way."
   :defer t
   :load-path "lisp"
   :config
-  (require 'ob-ein))
+  (require 'ob-ein)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((ein . t))))
 
 ;;; defer
 (use-package rust-mode
@@ -1908,31 +1936,3 @@ Return a list of languages seen along the way."
 (use-package rustic
   :straight t
   :mode "\\.rs\\'")
-
-(straight-use-package 'ob-rust)
-(straight-use-package 'ob-sml)
-(use-package ob-erlang
-  :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
-  :defer t)
-
-(use-package ob-ein
-  :straight (:type built-in))
-
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '(
-   (emacs-lisp . t)
-   (org . t)
-   (shell . t)
-   (awk . t)
-   (scheme . t)
-   (ocaml . t)
-   (python . t)
-   (gnuplot . t)
-   (octave . t)
-   (rust . t)
-   (haskell . t)
-   (sml . t)
-   (erlang . t)
-   (ein . t)
-   ))
