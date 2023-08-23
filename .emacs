@@ -1560,6 +1560,10 @@
   :straight t
   :hook (dired-mode . dired-hide-dotfiles-mode))
 
+(use-package dired-gitignore
+ :straight '(:type git :host github :repo "johannes-mueller/dired-gitignore.el")
+ :hook (dired-mode . dired-gitignore-mode))
+
 (use-package dired-aux
   :straight '(:type built-in)
   :defer t
