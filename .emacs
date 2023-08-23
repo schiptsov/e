@@ -915,95 +915,13 @@
 
 (use-package prescient
   :straight t
+  :defer t
   :config (prescient-persist-mode +1))
-
-(use-package counsel
-  :straight t
-  :defer t
-  :diminish
-  :bind (("C-x C-f" . counsel-find-file)
-         ("C-x b" . ivy-switch-buffer)
-         ("C-x B" . counsel-switch-buffer-other-window)
-         ("C-c C-r" . counsel-recentf)
-         ("C-x d" . counsel-dired)
-         ("M-s r" . counsel-rg)
-         ("C-c r" . counsel-rg)
-         ("C-c z" . counsel-fzf)
-         ("M-s z" . counsel-fzf)
-         ("C-c g" . counsel-git)
-         ("C-c a" . counsel-ag)
-         :map ivy-minibuffer-map ("C-r" . counsel-minibuffer-history))
-  :config
-  (setq ivy-initial-inputs-alist nil)
-  (global-set-key (kbd "M-x") 'counsel-M-x)
-  (global-set-key (kbd "C-x C-f") 'counsel-find-file)
-  (global-set-key (kbd "C-x l") 'counsel-locate)
-  (global-set-key (kbd "C-h f") 'counsel-describe-function)
-  (global-set-key (kbd "C-h v") 'counsel-describe-variable)
-  (global-set-key (kbd "C-h i") 'counsel-info-lookup-symbol)
-  (global-set-key (kbd "C-h u") 'counsel-unicode-char)
-  (global-set-key (kbd "C-h l") 'counsel-find-library)
-  (global-set-key (kbd "C-c j") 'counsel-git-grep)
-  (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
-  (add-to-list 'savehist-additional-variables 'counsel-compile-history)
-  (add-to-list 'ivy-sort-functions-alist '(counsel-imenu))
-  (counsel-mode t)
-  (global-set-key (kbd "M-y") 'counsel-yank-pop))
-
-(use-package counsel-web
-  :straight t
-  :after counsel
-  :config
-  (setq counsel-web-search-action #'eww-browse-url)
-  (setq counsel-web-engine 'google)
-  (setq counsel-web-search-alternate-action #'w3m)
-  (defvar counsel-web-map
-  (let ((map (make-sparse-keymap "counsel-web")))
-    (define-key map (kbd "w") #'counsel-web-suggest)
-    (define-key map (kbd "s") #'counsel-web-search)
-    (define-key map (kbd ".") #'counsel-web-thing-at-point)
-    map))
-  (global-set-key (kbd "C-c w") counsel-web-map))
-
-(use-package counsel-gtags
-  :straight t
-  :defer t)
-
-(use-package counsel-etags
-  :straight t
-  :bind (("C-]" . counsel-etags-find-tag-at-point))
-  :init
-  (add-hook 'prog-mode-hook
-        (lambda ()
-          (add-hook 'after-save-hook
-            'counsel-etags-virtual-update-tags 'append 'local)))
-  :config
-  (setq counsel-etags-update-interval 60)
-  (push "build" counsel-etags-ignore-directories))
-
-(use-package counsel-test
-  :straight t
-  :defer t)
-
-(use-package counsel-tramp
-  :straight t
-  :defer t
-  :config
-  (setq tramp-default-method "ssh")
-  (define-key global-map (kbd "C-c s") 'counsel-tramp)
-  (add-hook 'counsel-tramp-pre-command-hook
-            '(lambda () (global-aggressive-indent-mode -1)
-			   (projectile-mode -1)
-			   (editorconfig-mode -1)))
-  (add-hook 'counsel-tramp-quit-hook
-            '(lambda () (global-aggressive-indent-mode 1)
-			   (projectile-mode 1)
-			   (editorconfig-mode 1))))
 
 (use-package ivy
   :straight t
+  :demand t
   :diminish
-  ;; :after counsel
   :hook (after-init . ivy-mode) ;; another kludge
   :bind ("C-x b" . ivy-switch-buffer)
   :init
@@ -1061,6 +979,90 @@
                counsel-outline counsel-org-goto counsel-jq)
         ivy-prescient-retain-classic-highlighting t))
 
+;; has to be after ivy in a file
+(use-package counsel
+  :straight t
+  :defer t
+  :diminish
+  :bind (("C-x C-f" . counsel-find-file)
+         ("C-x b" . ivy-switch-buffer)
+         ("C-x B" . counsel-switch-buffer-other-window)
+         ("C-c C-r" . counsel-recentf)
+         ("C-x d" . counsel-dired)
+         ("M-s r" . counsel-rg)
+         ("C-c r" . counsel-rg)
+         ("C-c z" . counsel-fzf)
+         ("M-s z" . counsel-fzf)
+         ("C-c g" . counsel-git)
+         ("C-c a" . counsel-ag)
+         :map ivy-minibuffer-map ("C-r" . counsel-minibuffer-history))
+  :config
+  (setq ivy-initial-inputs-alist nil)
+  (global-set-key (kbd "M-x") 'counsel-M-x)
+  (global-set-key (kbd "C-x C-f") 'counsel-find-file)
+  (global-set-key (kbd "C-x l") 'counsel-locate)
+  (global-set-key (kbd "C-h f") 'counsel-describe-function)
+  (global-set-key (kbd "C-h v") 'counsel-describe-variable)
+  (global-set-key (kbd "C-h i") 'counsel-info-lookup-symbol)
+  (global-set-key (kbd "C-h u") 'counsel-unicode-char)
+  (global-set-key (kbd "C-h l") 'counsel-find-library)
+  (global-set-key (kbd "C-c j") 'counsel-git-grep)
+  (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
+  (add-to-list 'savehist-additional-variables 'counsel-compile-history)
+  (add-to-list 'ivy-sort-functions-alist '(counsel-imenu))
+  (counsel-mode t)
+  (global-set-key (kbd "M-y") 'counsel-yank-pop))
+
+(use-package counsel-web
+  :straight t
+  :after counsel
+  :config
+  (setq counsel-web-search-action #'eww-browse-url)
+  (setq counsel-web-engine 'google)
+  (setq counsel-web-search-alternate-action #'w3m)
+  (defvar counsel-web-map
+    (let ((map (make-sparse-keymap "counsel-web")))
+      (define-key map (kbd "w") #'counsel-web-suggest)
+      (define-key map (kbd "s") #'counsel-web-search)
+      (define-key map (kbd ".") #'counsel-web-thing-at-point)
+      map))
+  (global-set-key (kbd "C-c w") counsel-web-map))
+
+(use-package counsel-gtags
+  :straight t
+  :defer t)
+
+(use-package counsel-etags
+  :straight t
+  :bind (("C-]" . counsel-etags-find-tag-at-point))
+  :init
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (add-hook 'after-save-hook
+                        'counsel-etags-virtual-update-tags 'append 'local)))
+  :config
+  (setq counsel-etags-update-interval 60)
+  (push "build" counsel-etags-ignore-directories))
+
+(use-package counsel-test
+  :straight t
+  :defer t)
+
+(use-package counsel-tramp
+  :straight t
+  :defer t
+  :config
+  (setq tramp-default-method "ssh")
+  (define-key global-map (kbd "C-c s") 'counsel-tramp)
+  (add-hook 'counsel-tramp-pre-command-hook
+            '(lambda () (global-aggressive-indent-mode -1)
+               (projectile-mode -1)
+               (editorconfig-mode -1)))
+  (add-hook 'counsel-tramp-quit-hook
+            '(lambda () (global-aggressive-indent-mode 1)
+               (projectile-mode 1)
+               (editorconfig-mode 1))))
+
 ;; (use-package ivy-posframe
 ;;   :straight t
 ;;   :hook (ivy-mode . ivy-posframe-mode)
@@ -1100,6 +1102,7 @@
 
 (use-package swiper
   :straight t
+  :defer t
   :bind (("C-s" . swiper-isearch)
          ("C-r" . swiper-isearch-backward)
          ("M-s s" . swiper)
@@ -1612,7 +1615,7 @@
 
 (use-package tree-sitter
   :straight t
-  :hook (prog-mode . (lambda ()
+  :hook (python-mode . (lambda ()
                          (require 'tree-sitter)
                          (require 'tree-sitter-langs)
                          (require 'tree-sitter-hl)
