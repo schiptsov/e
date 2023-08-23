@@ -800,10 +800,16 @@
  shr-width 72                                ; Fold text to 70 columns
  eww-search-prefix "https://google.com/?q=")
 
+(setq eww-retrieve-command
+      '("chromium" "--headless" "--dump-dom"))
+
 (use-package w3m
   :straight t
   :commands (w3m w3m-browse-url)
   :config
+  (setq w3m-quick-start nil)
+  (setq w3m-display-mode 'plain)
+  (setq w3m-use-cookies t)
   (setq w3m-use-toolbar nil)
   (setq w3m-use-tab-line nil)
   (setq w3m-use-tab-menubar nil))
@@ -813,6 +819,33 @@
   :commands (xwwp)
   :custom
    (setq xwwp-follow-link-completion-system 'ivy))
+
+ (defun google-suggest ()
+     "Search `w3m-search-default-engine' with google completion canditates."
+     (interactive)
+     (w3m-search w3m-search-default-engine
+		 (completing-read  "Google search: "
+				   (dynamic-completion-table
+				   'google-suggest-aux))))
+
+(defun google-suggest-aux (input)
+     (with-temp-buffer
+       (insert
+	(shell-command-to-string
+	 (format "w3m -dump_source %s"
+		 (shell-quote-argument
+		  (format
+		   "http://www.google.com/complete/search?hl=en&js=true&qu=%s"
+		   input)))))
+       (read
+	(replace-regexp-in-string "," ""
+				  (progn
+				    (goto-char (point-min))
+				    (re-search-forward "\(" (point-max) t 2)
+				    (backward-char 1)
+				    (forward-sexp)
+				    (buffer-substring-no-properties
+				     (1- (match-end 0)) (point)))))))
 
 (use-package google-this
   :straight t
@@ -872,6 +905,14 @@
         completions-sort t
         completions-header-format nil))
 
+(use-package flx
+  :straight t
+  :defer t)
+
+(use-package prescient
+  :straight t
+  :config (prescient-persist-mode +1))
+
 (use-package counsel
   :straight t
   :defer t
@@ -905,13 +946,32 @@
   (counsel-mode t)
   (global-set-key (kbd "M-y") 'counsel-yank-pop))
 
-(use-package flx
+(use-package counsel-web
   :straight t
-  :defer t)
+  :after counsel
+  :config
+  (setq counsel-web-search-action #'eww-browse-url)
+  (setq counsel-web-engine 'google)
+  (setq counsel-web-search-alternate-action #'w3m)
+  (defvar counsel-web-map
+  (let ((map (make-sparse-keymap "counsel-web")))
+    (define-key map (kbd "w") #'counsel-web-suggest)
+    (define-key map (kbd "s") #'counsel-web-search)
+    (define-key map (kbd ".") #'counsel-web-thing-at-point)
+    map))
+  (global-set-key (kbd "C-c w") counsel-web-map))
 
-(use-package prescient
+(use-package counsel-etags
   :straight t
-  :config (prescient-persist-mode +1))
+  :bind (("C-]" . counsel-etags-find-tag-at-point))
+  :init
+  (add-hook 'prog-mode-hook
+        (lambda ()
+          (add-hook 'after-save-hook
+            'counsel-etags-virtual-update-tags 'append 'local)))
+  :config
+  (setq counsel-etags-update-interval 60)
+  (push "build" counsel-etags-ignore-directories))
 
 (use-package ivy
   :straight t
