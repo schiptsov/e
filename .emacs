@@ -467,6 +467,10 @@
   (setq all-the-icons-ivy-buffer-commands nil)
   (all-the-icons-ivy-setup))
 
+(use-package all-the-icons-ivy-rich
+  :ensure t
+  :init (all-the-icons-ivy-rich-mode 1))
+
 (use-package emojify
   :straight t
   :hook (after-init . global-emojify-mode)
@@ -961,6 +965,10 @@
     map))
   (global-set-key (kbd "C-c w") counsel-web-map))
 
+(use-package counsel-gtags
+  :straight t
+  :defer t)
+
 (use-package counsel-etags
   :straight t
   :bind (("C-]" . counsel-etags-find-tag-at-point))
@@ -972,6 +980,25 @@
   :config
   (setq counsel-etags-update-interval 60)
   (push "build" counsel-etags-ignore-directories))
+
+(use-package counsel-test
+  :straight t
+  :defer t)
+
+(use-package counsel-tramp
+  :straight t
+  :defer t
+  :config
+  (setq tramp-default-method "ssh")
+  (define-key global-map (kbd "C-c s") 'counsel-tramp)
+  (add-hook 'counsel-tramp-pre-command-hook
+            '(lambda () (global-aggressive-indent-mode -1)
+			   (projectile-mode -1)
+			   (editorconfig-mode -1)))
+  (add-hook 'counsel-tramp-quit-hook
+            '(lambda () (global-aggressive-indent-mode 1)
+			   (projectile-mode 1)
+			   (editorconfig-mode 1))))
 
 (use-package ivy
   :straight t
@@ -1021,7 +1048,7 @@
   :init
   (defun +ivy-prescient-non-fuzzy (str)
     (let ((prescient-filter-method '(literal regexp)))
-      (ivy-prescient-re-builder str)))
+      (ivy-prescient--old-re-builder str)))
   (setq prescient-filter-method
         '(literal regexp initialism fuzzy))
   :config
@@ -1256,6 +1283,9 @@
   (global-set-key (kbd "C-c C-y p")   #'aya-previous-in-history)
   (global-set-key (kbd "C-c C-y s")   #'aya-persist-snippet)
   (global-set-key (kbd "C-c C-y o")   #'aya-open-line))
+
+(straight-use-package 'projectile)
+(straight-use-package 'counsel-projectile)
 
 (use-package lsp-mode
   :straight t
