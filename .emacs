@@ -300,17 +300,7 @@
 (set-fill-column 72)
 (auto-fill-mode t)
 
-(setq-default grep-highlight-matches t
-              grep-scroll-output t)
-
 ;; yet another cool hack
-(when (executable-find "rg")
-  (require 'grep)
-  (setq grep-program "rg")
-  (grep-apply-setting
-   'grep-find-command
-   '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
-  (global-set-key (kbd "C-x C-g") 'grep-find))
 
 (when (executable-find "fd")
   (setq find-program "fd"))
@@ -335,6 +325,7 @@
 (setq electric-pair-preserve-balance t)
 (electric-pair-mode -1)
 
+;; but not in LISPs
 (electric-indent-mode t)
 
 (delete-selection-mode t)
@@ -373,10 +364,24 @@
 
 (use-package gcmh
   :straight t
-  :demand "GCMH"
-  :diminish t
+  :demand t
+  :diminish 'gcmh-mode
   :config
   (gcmh-mode t))
+
+;; a nice hack
+(use-package grep
+  :straight '(:type built-in)
+  :init
+  (setq-default grep-highlight-matches t
+                grep-scroll-output t)
+  :config
+  (when (executable-find "rg")
+    (setq grep-program "rg")
+    (grep-apply-setting
+     'grep-find-command
+     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
+    (global-set-key (kbd "C-x C-g") 'grep-find)))
 
 ;; (defun colorize-compilation-buffer ()
 ;;   "Enable colors in the *compilation* buffer."
@@ -889,7 +894,7 @@
 
 (use-package google-this
   :straight t
-  :diminish "Google"
+  :diminish 'google-this-mode
   :config
   (google-this-mode 1))
 
@@ -1535,10 +1540,11 @@
 
 (use-package auto-highlight-symbol
   :straight t
-  :diminish "HSA"
+  :diminish t
   :commands (ahs-highlight-p)
   :hook (prog-mode . auto-highlight-symbol-mode)
   :config
+  (diminish auto-highlight-symbol-mode)
   (setq ahs-case-fold-search nil
         ahs-default-range 'ahs-range-whole-buffer
         ahs-idle-interval 3.75))
