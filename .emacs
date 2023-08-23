@@ -302,15 +302,15 @@
 
 ;; yet another cool hack
 (when (executable-find "rg")
+  (require 'grep)
   (setq grep-program "rg")
   (grep-apply-setting
    'grep-find-command
-   '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27)))
+   '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
+  (global-set-key (kbd "C-x C-g") 'grep-find))
 
 (when (executable-find "fd")
   (setq find-program "fd"))
-
-(global-set-key (kbd "C-x C-g") 'grep-find)
 
 (when (executable-find "aspell")
   (setq ispell-program-name "aspell"))
@@ -971,19 +971,18 @@
   (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
   (ivy-mode t))
 
-;; lots of Doom Emacs hacks
+;; lots of Doom Emacs hacks. a nasty bug with :init instead of :config
 (use-package ivy-prescient
   :straight t
   :commands +ivy-prescient-non-fuzzy
   :hook (ivy-mode . ivy-prescient-mode)
   :hook (ivy-prescient-mode . prescient-persist-mode)
-  :init
+  :config
   (defun +ivy-prescient-non-fuzzy (str)
     (let ((prescient-filter-method '(literal regexp)))
-      (ivy-prescient--old-re-builder str)))
+      (ivy-prescient-re-builder str)))
   (setq prescient-filter-method
         '(literal regexp initialism fuzzy))
-  :config
   (add-to-list 'ivy-sort-functions-alist '(ivy-resume))
   (setq ivy-prescient-sort-commands
         '(:not swiper swiper-isearch ivy-switch-buffer lsp-ivy-workspace-symbol
