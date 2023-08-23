@@ -483,23 +483,12 @@
   :init
   (all-the-icons-completion-mode))
 
-(use-package all-the-icons-ivy
-  :straight t
-  :after ivy
-  :config
-  (setq all-the-icons-ivy-buffer-commands nil)
-  (all-the-icons-ivy-setup))
-
-(use-package all-the-icons-ivy-rich
-  :ensure t
-  :init (all-the-icons-ivy-rich-mode 1))
-
 (use-package emojify
   :straight t
   :hook (after-init . global-emojify-mode)
   :config
-   (setq emojify-styles)
-   (emojify-set-emoji-styles emojify-styles))
+  (setq emojify-styles)
+  (emojify-set-emoji-styles emojify-styles))
 
 (use-package mixed-pitch
   :straight t
@@ -968,9 +957,9 @@
 
 (use-package projectile
   :straight t
+  :hook (after-init . projectile-mode)
   :init
   (setq-default projectile-generic-command "rg --files --hidden -0")
-  :hook (after-init . projectile-mode)
   :config
   (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
 
@@ -987,7 +976,15 @@
   :demand t
   :diminish
   :hook (after-init . ivy-mode) ;; another kludge
-  :bind ("C-x b" . ivy-switch-buffer)
+  :bind
+  (([remap switch-to-buffer] . #'+ivy/switch-buffer)
+   ([remap switch-to-buffer-other-window] . #'+ivy/switch-buffer-other-window)
+   (:map ivy-minibuffer-map
+         ([remap doom/delete-backward-word] . #'ivy-backward-kill-word)
+         ("C-c C-e" . #'+ivy/woccur)
+         ("C-o" . #'ivy-dispatching-done)
+         )
+   )
   :init
   (let ((standard-search-fn
          #'+ivy-prescient-non-fuzzy)
@@ -1021,6 +1018,82 @@
   (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
   (ivy-mode t))
 
+;; this is such a cool embedded DLS
+(use-package counsel
+  :straight t
+  :defer t
+  :diminish
+  :bind
+  (([remap apropos]                .  #'counsel-apropos)
+   ([remap bookmark-jump]          .  #'counsel-bookmark)
+   ([remap compile]                .  #'+ivy/compile)
+   ([remap describe-bindings]      .  #'counsel-descbinds)
+   ([remap describe-face]          .  #'counsel-faces)
+   ([remap describe-function]      .  #'counsel-describe-function)
+   ([remap describe-variable]      .  #'counsel-describe-variable)
+   ([remap describe-symbol]        .  #'counsel-describe-symbol)
+   ([remap execute-extended-command] .  #'counsel-M-x)
+   ([remap find-file]              .  #'counsel-find-file)
+   ([remap find-library]           .  #'counsel-find-library)
+   ([remap imenu]                  .  #'counsel-imenu)
+   ([remap info-lookup-symbol]     .  #'counsel-info-lookup-symbol)
+   ([remap load-theme]             .  #'counsel-load-theme)
+   ([remap locate]                 .  #'counsel-locate)
+   ([remap org-goto]               .  #'counsel-org-goto)
+   ([remap org-set-tags-command]   .  #'counsel-org-tag)
+   ([remap projectile-compile-project] . #'+ivy/project-compile)
+   ([remap recentf-open-files]     .  #'counsel-recentf)
+   ([remap set-variable]           .  #'counsel-set-variable)
+   ([remap swiper]                 .  #'counsel-grep-or-swiper)
+   ([remap insert-char]            .  #'counsel-unicode-char)
+   ([remap yank-pop]               .  #'counsel-yank-pop)
+   ([remap dired] . #'counsel-dired)
+   ("C-x B" . counsel-switch-buffer-other-window)
+   ("M-s r" . counsel-rg)
+   ("C-c r" . counsel-rg)
+   ("C-c z" . counsel-fzf)
+   ("M-s z" . counsel-fzf)
+   ("C-c g" . counsel-git)
+   ("C-c a" . counsel-ag)
+   ("C-c j" . #'counsel-git-grep)
+   :map ivy-minibuffer-map ("C-r" . counsel-minibuffer-history))
+  :config
+  (setq counsel-describe-function-function #'helpful-callable
+        counsel-describe-variable-function #'helpful-variable
+        counsel-descbinds-function #'helpful-callable)
+  (add-hook 'counsel-grep-post-action-hook #'better-jumper-set-jump)
+  (add-hook 'counsel-grep-post-action-hook #'recenter)
+  (add-to-list 'counsel-compile-root-functions #'projectile-project-root)
+  (add-to-list 'savehist-additional-variables 'counsel-compile-history)
+  (setq counsel-find-file-ignore-regexp
+        "\\(?:^[#.]\\)\\|\\(?:[#~]$\\)\\|\\(?:^Icon?\\)")
+  (ivy-add-actions 'counsel-file-jump (plist-get ivy--actions-list 'counsel-find-file))
+  (counsel-mode t))
+
+(use-package ivy-rich
+  :straight t
+  :after ivy
+  ;; :hook (ivy-mode . ivy-rich-mode)
+  :init
+  (setq ivy-rich-path-style 'abbrev
+        ivy-virtual-abbreviate 'full)
+  :config
+  (setq ivy-rich-parse-remote-buffer nil)
+  (ivy-rich-project-root-cache-mode +1)
+  (ivy-rich-mode t))
+
+(use-package all-the-icons-ivy
+  :straight t
+  :after ivy
+  :config
+  ;; (setq all-the-icons-ivy-buffer-commands nil)
+  (all-the-icons-ivy-setup))
+
+(use-package all-the-icons-ivy-rich
+  :straight t
+  :after ivy-rich
+  :init (all-the-icons-ivy-rich-mode 1))
+
 (use-package prescient
   :straight t
   :demand t
@@ -1047,42 +1120,24 @@
                counsel-outline counsel-org-goto counsel-jq)
         ivy-prescient-retain-classic-highlighting t))
 
-;; has to be after ivy in a file
-(use-package counsel
-  :straight t
-  :defer t
-  :diminish
-  :bind (("C-x C-f" . counsel-find-file)
-         ("C-x b" . ivy-switch-buffer)
-         ("C-x B" . counsel-switch-buffer-other-window)
-         ("C-c C-r" . counsel-recentf)
-         ("C-x d" . counsel-dired)
-         ("M-s r" . counsel-rg)
-         ("C-c r" . counsel-rg)
-         ("C-c z" . counsel-fzf)
-         ("M-s z" . counsel-fzf)
-         ("C-c g" . counsel-git)
-         ("C-c a" . counsel-ag)
-         :map ivy-minibuffer-map ("C-r" . counsel-minibuffer-history))
-  :config
-  (setq ivy-initial-inputs-alist nil)
-  (global-set-key (kbd "M-x") 'counsel-M-x)
-  (global-set-key (kbd "C-x C-f") 'counsel-find-file)
-  (global-set-key (kbd "C-x l") 'counsel-locate)
-  (global-set-key (kbd "C-h f") 'counsel-describe-function)
-  (global-set-key (kbd "C-h v") 'counsel-describe-variable)
-  (global-set-key (kbd "C-h i") 'counsel-info-lookup-symbol)
-  (global-set-key (kbd "C-h u") 'counsel-unicode-char)
-  (global-set-key (kbd "C-h l") 'counsel-find-library)
-  (global-set-key (kbd "C-c j") 'counsel-git-grep)
-  (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
-  (add-to-list 'savehist-additional-variables 'counsel-compile-history)
-  (add-to-list 'ivy-sort-functions-alist '(counsel-imenu))
-  (counsel-mode t)
-  (global-set-key (kbd "M-y") 'counsel-yank-pop))
+(use-package doom-todo-ivy
+  :straight (:host github :repo "jsmestad/doom-todo-ivy")
+  :hook (after-init . doom-todo-ivy))
 
 (use-package counsel-projectile
-  :straight t)
+  :straight t
+  :defer t
+  :bind
+  (([remap projectile-find-file] . #'+ivy/projectile-find-file)
+   ([remap projectile-find-dir]  . #'counsel-projectile-find-dir)
+   ([remap projectile-switch-to-buffer] . #'counsel-projectile-switch-to-buffer)
+   ([remap projectile-grep] .  #'counsel-projectile-grep)
+   ([remap projectile-ag] . #'counsel-projectile-ag)
+   ([remap projectile-switch-project] . #'counsel-projectile-switch-project))
+  :config
+  (setf (alist-get 'projectile-find-file counsel-projectile-key-bindings)
+        #'+ivy/projectile-find-file)
+  (setq counsel-projectile-sort-files t))
 
 (use-package counsel-web
   :straight t
@@ -1147,18 +1202,6 @@
 (use-package ivy-avy
   :straight t
   :after ivy)
-
-(use-package ivy-rich
-  :straight t
-  :after ivy
-  ;; :hook (ivy-mode . ivy-rich-mode)
-  :init
-  (setq ivy-rich-path-style 'abbrev
-        ivy-virtual-abbreviate 'full)
-  :config
-  (setq ivy-rich-parse-remote-buffer nil)
-  (ivy-rich-project-root-cache-mode +1)
-  (ivy-rich-mode t))
 
 (use-package ivy-xref
   :straight t
