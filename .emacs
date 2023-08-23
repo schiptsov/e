@@ -9,14 +9,28 @@
 (setq byte-compile-warnings t)
 (setq native-comp-async-report-warnings-errors nil)
 
+;; a simple GC hack
+(add-function :after after-focus-change-function
+  (defun garbage-collect-maybe ()
+    (unless (frame-focus-state)
+      (garbage-collect))))
+
+;; another nice hack
+(defun save-all ()
+  (interactive)
+  (save-some-buffers t))
+(add-hook 'focus-out-hook #'save-all)
+
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
 (setq enable-local-variables :all)
 
-;;(setq-default url-gateway-method 'socks)
-;;(setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
-;;(setq-default socks-noproxy '("127.0.0.1"))
+;; (setq-default socks-override-functions 1)
+(setq-default url-gateway-method 'socks)
+(setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
+(setq-default socks-noproxy '("127.0.0.1"))
+(require 'socks)
 
 ;; we use straight.el
 (setq package-enable-at-startup nil)
@@ -323,12 +337,6 @@
 
 (auto-save-visited-mode t)
 
-(defun save-all ()
-  (interactive)
-  (save-some-buffers t))
-
-(add-hook 'focus-out-hook #'save-all)
-
 (recentf-mode t)
 (setq recentf-exclude `(,(expand-file-name "straight/build/" user-emacs-directory)
                           ,(expand-file-name "eln-cache/" user-emacs-directory)
@@ -367,7 +375,7 @@
 (use-package gcmh
   :straight t
   :demand t
-  :dininish t
+  :diminish t
   :config
   (gcmh-mode t))
 
@@ -783,6 +791,22 @@
   (define-key vterm-mode-map (kbd "M-p") 'vterm-send-up)
   (define-key vterm-mode-map (kbd "M-y") 'vterm-yank-pop)
   (define-key vterm-mode-map (kbd "M-/") 'vterm-send-tab))
+
+(setq
+ browse-url-browser-function 'eww-browse-url ; Use eww as the default browser
+ shr-use-fonts  nil                          ; No special fonts
+ shr-use-colors nil                          ; No colours
+ shr-indentation 2                           ; Left-side margin
+ shr-width 72                                ; Fold text to 70 columns
+ eww-search-prefix "https://google.com/?q=")
+
+(use-package w3m
+  :straight t
+  :commands (w3m w3m-browse-url)
+  :config
+  (setq w3m-use-toolbar nil)
+  (setq w3m-use-tab-line nil)
+  (setq w3m-use-tab-menubar nil))
 
 (use-package xwwp
   :straight (xwwp :type git :host github :repo "canatella/xwwp")
