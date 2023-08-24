@@ -851,8 +851,8 @@
  shr-width 72                                ; Fold text to 70 columns
  eww-search-prefix "https://google.com/?q=")
 
-(setq eww-retrieve-command
-      '("chromium" "--headless" "--dump-dom"))
+;; (setq eww-retrieve-command
+;;       '("chromium" "--headless" "--dump-dom"))
 
 (use-package w3m
   :straight t
@@ -1461,30 +1461,37 @@
   :straight t
   :commands lsp-ivy-workspace-symbol lsp-ivy-global-workspace-symbol)
 
-(add-hook 'prog-mode-hook (lambda ()
-                            (setq show-trailing-whitespace t)
-                            (setq indicate-empty-lines t)
-                            (set-fill-column 72)
-                            (auto-fill-mode t)
-                            (electric-pair-mode -1)
-                            (electric-indent-mode t)
-                            (abbrev-mode t)
-                            (rainbow-delimiters-mode t)))
+(add-hook 'semantic-mode-hook
+          '(lambda ()
+             (interactive)
+             (require 'semantic/ia)
+             (require 'semantic/bovine/c)
+             (semanticdb-enable-gnu-global-databases 'c-mode)
+             (semanticdb-enable-gnu-global-databases 'c++-mode)
+             (push 'company-semantic company-backends)))
+
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (interactive)
+            (setq show-trailing-whitespace t)
+            (setq indicate-empty-lines t)
+            (set-fill-column 72)
+            (auto-fill-mode t)
+            (electric-pair-mode t)
+            (electric-indent-mode t)
+            (abbrev-mode t)))
 
 (use-package rainbow-mode
   :straight t
-  :config
-  (rainbow-mode t))
+  :config (rainbow-mode t))
 
 (use-package electric-spacing
   :straight t
-  :defer t
   :hook (prog-mode . electric-spacing-mode))
 
 (use-package aggressive-indent
   :straight t
-  :config
-  (global-aggressive-indent-mode t))
+  :config (global-aggressive-indent-mode t))
 
 (use-package hl-todo
   :straight t
@@ -1516,15 +1523,13 @@
 
 (use-package expand-region
   :straight t
-  :config
-  (global-set-key (kbd "C-=") 'er/expand-region))
+  :config (global-set-key (kbd "C-=") 'er/expand-region))
 
 (use-package ggtags
   :straight t
   :diminish
   :hook (prog-mode . ggtags-mode)
-  :config
-  (push 'company-gtags company-backends))
+  :config (push 'company-gtags company-backends))
 
 (use-package counsel-gtags
   :straight t
@@ -1563,16 +1568,24 @@
   :straight '(:type built-in)
   :defer t
   :hook (emacs-lisp-mode . (lambda ()
+                             (interactive)
                              (electric-pair-mode -1)
                              (electric-spacing-mode -1)
-                             (semantic-mode t)
                              (auto-compile-mode t)
-                             (ggtags-mode t)
-                             ))
-
+                             (semantic-mode t)))
   :config
   (with-eval-after-load 'semantic
     (semantic-default-emacs-lisp-setup)))
+
+(use-package cc-mode
+  :straight t
+  :hook (c-mode-common . (lambda ()
+                           (interactive)
+                           (semantic-mode t)
+                           ))
+  :config
+  (with-eval-after-load 'semantic
+    (semantic-default-c-setup)))
 
 (use-package highlight-quoted
   :straight t
@@ -1606,6 +1619,21 @@
   :hook (ielm-mode . highlight-quoted-mode)
   :hook (ielm-mode . highlight-numbers-mode))
 
+(use-package tramp
+  :defer t
+  :config
+  (setq vc-handled-backends '(Git)
+        file-name-inhibit-locks t
+        tramp-inline-compress-start-size 1000
+        tramp-copy-size-limit 10000
+        tramp-verbose 1)
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
+
+(use-package dired-async
+  :straight '(:type built-in)
+  :config
+  :hook (dired-mode-load . dired-async-mode))
+
 ;; https://github.com/Fuco1/dired-hacks
 (use-package dired
   :straight '(:type built-in)
@@ -1622,13 +1650,9 @@
   :straight '(:type built-in)
   :defer t
   :config
+  (require 'dired-async)
   (setq dired-create-destination-dirs 'ask
         dired-vc-rename-file t))
-
-(use-package dired-async
-  :straight '(:type built-in)
-  :config
-  :hook (dired-mode . dired-async-mode))
 
 (use-package dired-x
   :straight '(:type built-in)
@@ -1878,13 +1902,13 @@ delete."
 (use-package eshell
   :straight '(:type built-in)
   :hook (eshell-mode . (lambda ()
+                         (interactive)
                          (semantic-mode -1)
                          (hide-mode-line-mode t)
                          (rainbow-delimiters-mode t)
                          (highlight-numbers-mode t)
+                         (highlight-quoted-mode t)
                          (smartparens-strict-mode t)
-                         ;; (company-mode t)
-                         ;; (yas-minor-mode t)
                          (visual-line-mode +1)
                          (setq hscroll-margin 0)
                          (set-display-table-slot standard-display-table
@@ -1991,8 +2015,8 @@ delete."
   :interpreter "ipython"
   :hook (python-mode . lsp-deferred)
   :hook (python-mode . (lambda ()
+                         (interacive)
                          (semantic-mode t)
-                         (python-mode t)
                          (elpy-mode t)))
   :config
   (setq tab-width     4
