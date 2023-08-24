@@ -1723,44 +1723,7 @@
   :defer t
   :after forge)
 
-(use-package treesit-auto
-  :straight t
-  :config
-  (global-treesit-auto-mode))
-
-(use-package treesit
-  :straight '(:type built-in)
-  :init
-  (setq-default treesit-font-lock-level 4)
-  :config
-  (when (boundp 'treesit-extra-load-path)
-    (add-to-list 'treesit-extra-load-path "/usr/lib64/")
-    (add-to-list 'treesit-extra-load-path "/usr/local/lib/")
-    (add-to-list 'treesit-extra-load-path "~/.local/lib/"))
-  (dolist (mapping '((python-mode . python-ts-mode)
-                     (css-mode . css-ts-mode)
-                     (typescript-mode . tsx-ts-mode)
-                     (json-mode . json-ts-mode)
-                     (js-mode . js-ts-mode)
-                     (css-mode . css-ts-mode)
-                     (yaml-mode . yaml-ts-mode)))
-    (add-to-list 'major-mode-remap-alist mapping)))
-
-(use-package combobulate
-  :straight '(:host github :repo "mickeynp/combobulate")
-  :preface
-  (setq combobulate-key-prefix "C-c o")
-
-  :hook ((python-ts-mode . combobulate-mode)
-         (js-ts-mode . combobulate-mode)
-         (css-ts-mode . combobulate-mode)
-         (yaml-ts-mode . combobulate-mode)
-         (json-ts-mode . combobulate-mode)
-         (typescript-ts-mode . combobulate-mode)
-         (tsx-ts-mode . combobulate-mode)))
-
-(straight-use-package 'tree-sitter-langs)
-(straight-use-package 'tree-sitter-indent)
+;; the future
 
 (defun auto-configure-treesitter ()
   "Find and configure installed grammars, remap to matching -ts-modes if present.
@@ -1798,6 +1761,46 @@ Return a list of languages seen along the way."
     seen-grammars))
 
 (auto-configure-treesitter)
+
+(use-package treesit-auto
+  :straight t
+  :config
+  (global-treesit-auto-mode))
+
+(use-package treesit
+  :straight '(:type built-in)
+  :init
+  (setq-default treesit-font-lock-level 4)
+  (when (boundp 'treesit-extra-load-path)
+    (add-to-list 'treesit-extra-load-path "/usr/lib64/")
+    (add-to-list 'treesit-extra-load-path "/usr/local/lib/")
+    (add-to-list 'treesit-extra-load-path "~/.local/lib/"))
+  :config
+  (dolist (mapping '((python-mode . python-ts-mode)
+                     (css-mode . css-ts-mode)
+                     (typescript-mode . tsx-ts-mode)
+                     (json-mode . json-ts-mode)
+                     (js-mode . js-ts-mode)
+                     (css-mode . css-ts-mode)
+                     (yaml-mode . yaml-ts-mode)))
+    (add-to-list 'major-mode-remap-alist mapping)))
+
+(use-package combobulate
+  :straight '(:host github :repo "mickeynp/combobulate")
+  :preface
+  (setq combobulate-key-prefix "C-c o")
+
+  :hook ((python-ts-mode . combobulate-mode)
+         (js-ts-mode . combobulate-mode)
+         (css-ts-mode . combobulate-mode)
+         (yaml-ts-mode . combobulate-mode)
+         (json-ts-mode . combobulate-mode)
+         (typescript-ts-mode . combobulate-mode)
+         (tsx-ts-mode . combobulate-mode)))
+
+;; the obsolete way
+(straight-use-package 'tree-sitter-langs)
+(straight-use-package 'tree-sitter-indent)
 
 (use-package tree-sitter
   :straight t
@@ -1874,7 +1877,6 @@ delete."
 
 (use-package eshell
   :straight '(:type built-in)
-  :config
   :hook (eshell-mode . (lambda ()
                          (semantic-mode -1)
                          (hide-mode-line-mode t)
@@ -1887,36 +1889,33 @@ delete."
                          (setq hscroll-margin 0)
                          (set-display-table-slot standard-display-table
                                                  0 ?\ )))
-  (setq  eshell-scroll-to-bottom-on-input 'all
-         eshell-scroll-to-bottom-on-output 'all
-         eshell-kill-processes-on-exit t
-         eshell-destroy-buffer-when-process-dies t)
-  (with-eval-after-load 'em-term
-    (append '("htop" "vim" "nvim" "ncmpcpp") eshell-visual-commands))
-  (with-eval-after-load 'em-alias
-    (setq eshell-command-aliases-list
-          (append eshell-command-aliases-list '(("q"  "exit")           ; built-in
-                                                ("f"  "find-file $1")
-                                                ("ff" "find-file-other-window $1")
-                                                ("d"  "dired $1")
-                                                ("bd" "eshell-up $1")
-                                                ("rg" "rg --color=always $*")
-                                                ("l"  "ls -lh $*")
-                                                ("ll" "ls -lah $*")
-                                                ("git" "git --no-pager $*")
-                                                ("gg" "magit-status")
-                                                ("cdp" "cd-to-project")
-                                                ("clear" "clear-scrollback")))))
+  :config
+  (setq eshell-scroll-to-bottom-on-input 'all
+        eshell-scroll-to-bottom-on-output 'all
+        eshell-kill-processes-on-exit t
+        eshell-destroy-buffer-when-process-dies t)
   (setq pcomplete-cycle-completions nil)
   (with-eval-after-load 'em-cmpl
     (setq eshell-cmpl-cycle-completions nil))
   (with-eval-after-load 'em-hist
     (setq eshell-hist-ignoredups t)
-    ;; (setq eshell-input-filter (lambda (input) (not (string-match-p "\\`\\s-+" input))))
+    (setq eshell-input-filter (lambda (input) (not (string-match-p "\\`\\s-+" input))))
     )
-  (with-eval-after-load 'em-prompt
-    (setq eshell-highlight-prompt t)
-    (setq eshell-prompt-regexp "^.* λ "))
+  (with-eval-after-load 'em-term
+    (append '("htop" "vim" "nvim" "ncmpcpp") eshell-visual-commands))
+  (with-eval-after-load 'em-alias
+    (setq eshell-command-aliases-list '(("q"  "exit")
+                                        ("f"  "find-file $1")
+                                        ("ff" "find-file-other-window $1")
+                                        ("d"  "dired $1")
+                                        ("bd" "eshell-up $1")
+                                        ("rg" "rg --color=always $*")
+                                        ("l"  "ls -lh $*")
+                                        ("ll" "ls -lah $*")
+                                        ("git" "git --no-pager $*")
+                                        ("gg" "magit-status")
+                                        ("cdp" "cd-to-project")
+                                        ("clear" "clear-scrollback"))))
   (with-eval-after-load 'em-glob
     (setq  eshell-glob-case-insensitive t
            eshell-error-if-no-glob t))
