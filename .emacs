@@ -11,9 +11,9 @@
 
 ;; a simple GC hack
 (add-function :after after-focus-change-function
-  (defun garbage-collect-maybe ()
-    (unless (frame-focus-state)
-      (garbage-collect))))
+              (defun garbage-collect-maybe ()
+                (unless (frame-focus-state)
+                  (garbage-collect))))
 
 ;; another nice hack
 (defun save-all ()
@@ -153,7 +153,7 @@
 (setq-default tab-always-indent 'complete)
 
 (define-key completion-in-region-mode-map (kbd "C-p") #'minibuffer-previous-completion)
-  (define-key completion-in-region-mode-map (kbd "C-n") #'minibuffer-next-completion)
+(define-key completion-in-region-mode-map (kbd "C-n") #'minibuffer-next-completion)
 
 (global-set-key (kbd "RET") 'newline-and-indent)
 
@@ -339,9 +339,9 @@
 
 (recentf-mode t)
 (setq recentf-exclude `(,(expand-file-name "straight/build/" user-emacs-directory)
-                          ,(expand-file-name "eln-cache/" user-emacs-directory)
-                          ,(expand-file-name "etc/" user-emacs-directory)
-                          ,(expand-file-name "var/" user-emacs-directory)))
+                        ,(expand-file-name "eln-cache/" user-emacs-directory)
+                        ,(expand-file-name "etc/" user-emacs-directory)
+                        ,(expand-file-name "var/" user-emacs-directory)))
 
 (defun find-recent-file ()
   "Find a file that was recently visted using `completing-read'."
@@ -368,6 +368,12 @@
   :diminish 'gcmh-mode
   :config
   (gcmh-mode t))
+
+(use-package whitespace-cleanup-mode
+  :straight t
+  :hook (after-init . global-whitespace-cleanup-mode)
+  :config
+  (diminish 'whitespace-cleanup-mode))
 
 ;; a nice hack
 (use-package grep
@@ -414,8 +420,8 @@
 
 (use-package flymake
   :bind (:map flymake-mode-map
-         ("M-n" . flymake-goto-next-error)
-         ("M-p" . flymake-goto-prev-error)))
+              ("M-n" . flymake-goto-next-error)
+              ("M-p" . flymake-goto-prev-error)))
 
 (defun my-find-tag ()
   "Use `completing-read' to navigate to a tag."
@@ -629,12 +635,12 @@
   (global-set-key "\C-ca" 'org-agenda)
 
   (setq-local prettify-symbols-alist '(("#+BEGIN_SRC" . "»")
-                                         ("#+END_SRC" . "«")
-                                         ("#+begin_src" . "»")
-                                         ("#+end_src" . "«")
-                                         ("lambda"  . "λ")
-                                         ("->" . "→")
-                                         ("->>" . "↠")))
+                                       ("#+END_SRC" . "«")
+                                       ("#+begin_src" . "»")
+                                       ("#+end_src" . "«")
+                                       ("lambda"  . "λ")
+                                       ("->" . "→")
+                                       ("->>" . "↠")))
   (setq-local prettify-symbols-unprettify-at-point 'right-edge))
 
 (use-package org-fragtog
@@ -1234,19 +1240,19 @@
   :straight t
   :after counsel
   :bind
-    ([remap describe-function] . helpful-callable)
-    ([remap describe-command] . helpful-command)
-    ([remap describe-variable] . helpful-variable)
-    ([remap describe-key] . helpful-key)
-    :config
-    (defalias 'describe-function 'helpful-callable)
-    (defalias 'describe-command 'helpful-command)
-    (defalias 'describe-variable 'helpful-variable)
-    (defalias 'describe-key 'helpful-key)
-    ;; (global-set-key (kbd "C-h f") #'helpful-callable)
-    ;; (global-set-key (kbd "C-h v") #'helpful-variable)
-    ;; (global-set-key (kbd "C-h k") #'helpful-key)
-    ;; (global-set-key (kbd "C-h x") #'helpful-command)
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-command] . helpful-command)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-key] . helpful-key)
+  :config
+  (defalias 'describe-function 'helpful-callable)
+  (defalias 'describe-command 'helpful-command)
+  (defalias 'describe-variable 'helpful-variable)
+  (defalias 'describe-key 'helpful-key)
+  ;; (global-set-key (kbd "C-h f") #'helpful-callable)
+  ;; (global-set-key (kbd "C-h v") #'helpful-variable)
+  ;; (global-set-key (kbd "C-h k") #'helpful-key)
+  ;; (global-set-key (kbd "C-h x") #'helpful-command)
   (setq counsel-describe-function-function #'helpful-callable)
   (setq counsel-describe-variable-function #'helpful-variable)
   (setq counsel-descbinds-function #'helpful-callable)
@@ -1508,10 +1514,10 @@
   (setq diff-hl-show-staged-changes nil)
   (global-diff-hl-mode t))
 
-  (use-package expand-region
-    :straight t
-    :config
-    (global-set-key (kbd "C-=") 'er/expand-region))
+(use-package expand-region
+  :straight t
+  :config
+  (global-set-key (kbd "C-=") 'er/expand-region))
 
 (use-package ggtags
   :straight t
@@ -1760,6 +1766,7 @@
   "Find and configure installed grammars, remap to matching -ts-modes if present.
 Return a list of languages seen along the way."
   (let ((grammar-name-to-emacs-lang '(("emacs-lisp". "elisp")
+                                      ("common-lisp" . "commonlisp")
                                       ("c-sharp" . "csharp")
                                       ("cpp" . "c++")
                                       ("gomod" . "go-mod")
@@ -1810,52 +1817,124 @@ Return a list of languages seen along the way."
 
 ;;; When /not in a rush/, this is a /principle-guided/ way.
 
+(defmacro cmd! (&rest body)
+  "Returns (lambda () (interactive) ,@body)
+A factory for quickly producing interaction commands, particularly for keybinds
+or aliases."
+  (declare (doc-string 1) (pure t) (side-effect-free t))
+  `(lambda (&rest _) (interactive) ,@body))
+
+;;;###autoload
+(defun +eshell/quit-or-delete-char (arg)
+  "Delete a character (ahead of the cursor) or quit eshell if there's nothing to
+delete."
+  (interactive "p")
+  (if (and (eolp) (looking-back eshell-prompt-regexp nil))
+      (eshell-life-is-too-much)
+    (delete-char arg)))
+
+;;;###autoload
+(defun +eshell/search-history ()
+  "Search the eshell command history with helm, ivy or `eshell-list-history'."
+  (interactive)
+  (require 'em-hist)
+  (let* ((ivy-completion-beg (eshell-bol))
+         (ivy-completion-end (point-at-eol))
+         (input (buffer-substring-no-properties
+                 ivy-completion-beg
+                 ivy-completion-end)))
+    ;; Better than `counsel-esh-history' because that doesn't
+    ;; pre-populate the initial input or selection.
+    (ivy-read "Command: "
+              (delete-dups
+               (when (> (ring-size eshell-history-ring) 0)
+                 (ring-elements eshell-history-ring)))
+              :initial-input input
+              :action #'ivy-completion-in-region-action)))
+
+(defun +eshell/clear-prompt ()
+  (interactive)
+  (eshell/clear-scrollback)
+  (eshell-emit-prompt))
+
+(use-package esh-mode
+  :defer t
+  :straight '(:type built-in)
+  :bind (:map eshell-mode-map
+              ("C-a" .  #'eshell-bol)
+              ("C-e" .  #'end-of-line)
+              ("C-l" .  #'+eshell/clear-prompt)
+              ;; ("C-l" .  (cmd! (eshell/clear-scrollback) (eshell-emit-prompt)))
+              ("C-r"  . #'counsel-esh-history)
+              ("M-s"  . #'+eshell/search-history)
+              ("C-d"  . #'+eshell/quit-or-delete-char))
+  :config
+  (add-to-list 'eshell-modules-list 'eshell-tramp)
+  (add-to-list 'eshell-modules-list 'eshell-smart))
+
 (use-package eshell
   :straight '(:type built-in)
-  :defer t
-  :after company
-  :hook (eshell-mode .  smartparens-strict-mode)
-  :hook (eshell-mode .  company-mode)
-  :hook (eshell-mode .  hide-mode-line-mode)
-  :hook (eshell-mode . (lambda () (semantic-mode -1)))
-  :bind (:map eshell-mode-map ("C-r"  . counsel-esh-history))
-  :init
-  (setq eshell-cmpl-cycle-completions nil
-        eshell-scroll-to-bottom-on-input 'all
-        eshell-scroll-to-bottom-on-output 'all
-        eshell-input-filter (lambda (input) (not (string-match-p "\\`\\s-+" input)))
-        ;; em-prompt
-        eshell-prompt-regexp "^.* λ "
-        ;; em-glob
-        eshell-glob-case-insensitive t
-        eshell-error-if-no-glob t
-        eshell-kill-processes-on-exit t
-        eshell-hist-ignoredups t
-        eshell-destroy-buffer-when-process-dies t
-        eshell-highlight-prompt t)
   :config
+  :hook (eshell-mode . (lambda ()
+                         (semantic-mode -1)
+                         (hide-mode-line-mode t)
+                         (rainbow-delimiters-mode t)
+                         (highlight-numbers-mode t)
+                         (smartparens-strict-mode t)
+                         ;; (company-mode t)
+                         ;; (yas-minor-mode t)
+                         (visual-line-mode +1)
+                         (setq hscroll-margin 0)
+                         (set-display-table-slot standard-display-table
+                                                 0 ?\ )))
+  (setq  eshell-scroll-to-bottom-on-input 'all
+         eshell-scroll-to-bottom-on-output 'all
+         eshell-kill-processes-on-exit t
+         eshell-destroy-buffer-when-process-dies t)
+  (with-eval-after-load 'em-term
+    (append '("htop" "vim" "nvim" "ncmpcpp") eshell-visual-commands))
+  (with-eval-after-load 'em-alias
+    (setq eshell-command-aliases-list
+          (append eshell-command-aliases-list '(("q"  "exit")           ; built-in
+                                                ("f"  "find-file $1")
+                                                ("ff" "find-file-other-window $1")
+                                                ("d"  "dired $1")
+                                                ("bd" "eshell-up $1")
+                                                ("rg" "rg --color=always $*")
+                                                ("l"  "ls -lh $*")
+                                                ("ll" "ls -lah $*")
+                                                ("git" "git --no-pager $*")
+                                                ("gg" "magit-status")
+                                                ("cdp" "cd-to-project")
+                                                ("clear" "clear-scrollback")))))
   (setq pcomplete-cycle-completions nil)
-  (require 'esh-opt)
-  (require 'em-rebind)
-  (require 'em-glob)
-  (require 'em-prompt)
-  (require 'em-ls)
-  (require 'em-term)
-  (require 'em-unix)
-  (require 'em-smart)
-  (setq eshell-where-to-jump 'begin
-        eshell-review-quick-commands nil
-        eshell-smart-space-goes-to-end t)
-  (add-hook 'eshell-mode-hook #'eshell-smart-initialize)
-  (add-hook 'eshell-preoutput-filter-functions  'ansi-color-apply))
+  (with-eval-after-load 'em-cmpl
+    (setq eshell-cmpl-cycle-completions nil))
+  (with-eval-after-load 'em-hist
+    (setq eshell-hist-ignoredups t)
+    ;; (setq eshell-input-filter (lambda (input) (not (string-match-p "\\`\\s-+" input))))
+    )
+  (with-eval-after-load 'em-prompt
+    (setq eshell-highlight-prompt t)
+    (setq eshell-prompt-regexp "^.* λ "))
+  (with-eval-after-load 'em-glob
+    (setq  eshell-glob-case-insensitive t
+           eshell-error-if-no-glob t))
+  (with-eval-after-load 'em-smart
+    (setq eshell-where-to-jump 'begin
+          eshell-review-quick-commands nil
+          eshell-smart-space-goes-to-end t)
+    (add-hook 'eshell-mode-hook #'eshell-smart-initialize))
+  (add-hook 'eshell-preoutput-filter-functions 'ansi-color-apply))
 
 (global-set-key (kbd "C-c s e") #'eshell)
 (global-set-key (kbd "C-c s t") #'vterm)
 
+(use-package eshell-up
+  :commands eshell-up eshell-up-peek)
+
 (use-package esh-help
-  :straight t
-  :after esh-mode
-  :hook (eshell-mode . eldoc-mode)
+  :after eshell
   :config (setup-esh-help-eldoc))
 
 (use-package shrink-path
@@ -1863,18 +1942,15 @@ Return a list of languages seen along the way."
   :defer t)
 
 (use-package eshell-did-you-mean
-  :straight t
-  :defer t
-  :after esh-mode
-  :config
-  (eshell-did-you-mean-setup))
+  :after eshell-mode
+  :config (eshell-did-you-mean-setup)
+  (setq eshell-last-command-name "catt")
+  (eshell-did-you-mean-output-filter "catt: command not found"))
 
 (use-package eshell-syntax-highlighting
-  :straight t
   :hook (eshell-mode . eshell-syntax-highlighting-mode))
 
 (use-package shell-pop
-  :straight t
   :defer t)
 
 ;;; Some hacks to make ~company-mode~ work.
@@ -1909,32 +1985,25 @@ Return a list of languages seen along the way."
         lsp-pyright-auto-import-completions t
         lsp-pyright-use-library-code-for-types t))
 
-;;; a comint-mode
-(use-package python
-  :straight '(:type built-in)
-  :defer t
+;;; a major mode
+(use-package python-mode
+  :straight t
+  :mode "\\.py\\'"
+  :interpreter "ipython"
+  :hook (python-mode . lsp-deferred)
   :hook (python-mode . (lambda ()
                          (semantic-mode t)
                          (python-mode t)
                          (elpy-mode t)))
-    :interpreter "ipython -i"
   :config
+  (setq tab-width     4
+        python-indent 4)
+  (setq indent-tabs-mode nil)
   (setq python-check-command "ruff")
   (add-hook 'python-mode-hook #'flymake-mode)
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "-i --simple-prompt"
         python-shell-prompt-detect-failure-warning nil))
-
-;;; a major mode
-(use-package python-mode
-  :straight t
-  :defer t
-  :hook (python-mode . lsp-deferred)
-  :hook (python-mode . elpy-mode)
-  :config
-  (setq tab-width     4
-        python-indent 4)
-  (setq indent-tabs-mode nil))
 
 ;;; an actual mode which uses it all
 (use-package elpy
@@ -1985,3 +2054,43 @@ Return a list of languages seen along the way."
 (use-package rustic
   :straight t
   :mode "\\.rs\\'")
+
+(add-hook 'lisp-mode-hook (lambda ()
+                            (unless (featurep 'slime)
+                              (require 'slime)
+                              (normal-mode))))
+
+(with-eval-after-load 'slime
+  (when (executable-find "sbcl")
+    (add-to-list 'slime-lisp-implementations
+                 '(sbcl ("sbcl") :coding-system utf-8-unix)))
+  (when (executable-find "ccl")
+    (add-to-list 'slime-lisp-implementations
+                 '(ccl ("ccl") :coding-system utf-8-unix))))
+
+;; From http://bc.tech.coop/blog/070515.html
+(defun lispdoc ()
+  "Searches lispdoc.com for SYMBOL, which is by default the symbol currently under the curser"
+  (interactive)
+  (let* ((word-at-point (word-at-point))
+         (symbol-at-point (symbol-at-point))
+         (default (symbol-name symbol-at-point))
+         (inp (read-from-minibuffer
+               (if (or word-at-point symbol-at-point)
+                   (concat "Symbol (default " default "): ")
+                 "Symbol (no default): "))))
+    (if (and (string= inp "") (not word-at-point) (not
+                                                   symbol-at-point))
+        (message "you didn't enter a symbol!")
+      (let ((search-type (read-from-minibuffer
+                          "full-text (f) or basic (b) search (default b)? ")))
+        (browse-url (concat "https://lispdoc.com?q="
+                            (if (string= inp "")
+                                default
+                              inp)
+                            "&search="
+                            (if (string-equal search-type "f")
+                                "full+text+search"
+                              "basic+search")))))))
+
+(define-key lisp-mode-map (kbd "C-c l") 'lispdoc)
