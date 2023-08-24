@@ -1293,6 +1293,7 @@
              company-manual-begin
              company-grab-line)
   :hook (prog-mode . company-mode)
+  :bind ("M-/" . #'company-complete-common-or-cycle)
   :init
   (global-company-mode)
   :config
@@ -1461,15 +1462,6 @@
   :straight t
   :commands lsp-ivy-workspace-symbol lsp-ivy-global-workspace-symbol)
 
-(add-hook 'semantic-mode-hook
-          '(lambda ()
-             (interactive)
-             (require 'semantic/ia)
-             (require 'semantic/bovine/c)
-             (semanticdb-enable-gnu-global-databases 'c-mode)
-             (semanticdb-enable-gnu-global-databases 'c++-mode)
-             (push 'company-semantic company-backends)))
-
 (add-hook 'prog-mode-hook
           (lambda ()
             (interactive)
@@ -1480,6 +1472,29 @@
             (electric-pair-mode t)
             (electric-indent-mode t)
             (abbrev-mode t)))
+
+;; maintains a tag database
+;; parses and completes
+;; powerful but outdate, prefer modern /clangd/ and LSP based solutions
+(add-hook 'semantic-mode-hook
+          '(lambda ()
+             (interactive)
+             (require 'semantic/ia)
+             (require 'semantic/bovine/c)
+             (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+             (add-to-list 'semantic-lex-c-preprocessor-symbol-file
+                          "/usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h")
+             (semanticdb-enable-gnu-global-databases 'c-mode)
+             (semanticdb-enable-gnu-global-databases 'c++-mode)
+             (local-set-key "\C-c\C-j" 'semantic-ia-fast-jump)
+             (local-set-key "\C-c\C-s" 'semantic-ia-show-summary)
+             (push 'company-semantic company-backends)))
+
+(use-package google-c-style
+  :defer t)
+
+(use-package clang-format
+  :commands clang-format)
 
 (use-package rainbow-mode
   :straight t
@@ -1577,15 +1592,94 @@
   (with-eval-after-load 'semantic
     (semantic-default-emacs-lisp-setup)))
 
+(use-package company-c-headers
+  :init
+  (add-to-list 'company-backends 'company-c-headers)
+  :config
+  (add-to-list 'company-c-headers-path-system "/usr/include/c++/v1/"))
+
+(use-package function-args
+  :hook (c-common . function-args-mode)
+  :config
+  (set-default 'semantic-case-fold -1)
+  (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+  (fa-config-default))
+
+;; yet another cool tags solution
+(use-package rtags
+  :defer t
+  :config
+  (progn
+    (unless (rtags-executable-find "rc") (error "Binary rc is not installed!"))
+    (unless (rtags-executable-find "rdm") (error "Binary rdm is not installed!"))
+
+    (define-key c-mode-base-map (kbd "M-.") 'rtags-find-symbol-at-point)
+    (define-key c-mode-base-map (kbd "M-,") 'rtags-find-references-at-point)
+    (define-key c-mode-base-map (kbd "M-?") 'rtags-display-summary)
+    (rtags-enable-standard-keybindings)
+
+    ;; Shutdown rdm when leaving emacs.
+    (add-hook 'kill-emacs-hook 'rtags-quit-rdm)
+    ))
+(use-package company-rtags
+  :defer t
+  :config
+  (progn
+    (setq rtags-autostart-diagnostics t)
+    (rtags-diagnostics)
+    (setq rtags-completions-enabled t)
+    (push 'company-rtags company-backends)
+    ))
+
+(use-package flycheck-rtags
+  :defer t
+  :config
+  (progn
+    ;; ensure that we use only rtags checking
+    ;; https://github.com/Andersbakken/rtags#optional-1
+    (defun setup-flycheck-rtags ()
+      (flycheck-select-checker 'rtags)
+      (setq-local flycheck-highlighting-mode nil) ;; RTags creates more accurate overlays.
+      (setq-local flycheck-check-syntax-automatically nil)
+      (rtags-set-periodic-reparse-timeout 2.0)  ;; Run flycheck 2 seconds after being idle.
+      )
+    (add-hook 'c-mode-hook #'setup-flycheck-rtags)
+    (add-hook 'c++-mode-hook #'setup-flycheck-rtags)
+    ))
+
+;; just use LSP and clang-format tools
 (use-package cc-mode
-  :straight t
   :hook (c-mode-common . (lambda ()
                            (interactive)
+                           (setq-local c-basic-offset 4
+                                       tab-width 4
+                                       indent-tabs-mode t)
+                           (setq c-syntactic-indentation t)
+                           (define-key c-mode-base-map (kbd "RET") 'newline-and-indent)
+                           (push 'company-clang comnany-backends)
                            (semantic-mode t)
                            ))
+  :hook (c++-mode . (lambda ()
+                      (interactive)
+                      (setq flycheck-clang-language-standard "c++20")))
   :config
   (with-eval-after-load 'semantic
     (semantic-default-c-setup)))
+
+(use-package gdb
+  :straight (:type built-in)
+  :defer t
+  :init
+  (setq gdb-many-windows t
+        gdb-show-main t))
+
+;; cool but outdated
+;; relies on rtags
+(use-package cmake-ide
+  :defer t
+  :config
+  (setq cmake-ide-flags-c++ (append '("-std=c++20")))
+  (cmake-ide-setup))
 
 (use-package highlight-quoted
   :straight t
