@@ -1,0 +1,255 @@
+#+TITLE: More about Emacs
+#+SUBTITLE: Realizations, insights and a-ha moments about Emacs
+#+STARTUP: indent fold overview
+
+
+Proper discoveries and generalizations from the oldtimers - UNIX, Smalltalk, Genera, Plan9
+
+The most fundamental principles are still of /pipelining/ and of /transforming/ a strucrured text.
+
+It has been generalized from daily practices of running mundane tasks on a /terminal/, where ~ls~, ~find~ and ~grep~ were the main utilities.
+
+Notice that in the old time there were no way to easily copy and paste struff around, so they used temporary filles, which later became an editor buffers. This is actually a /big deal/.
+
+dired
+
+the output of ~ls~ is going to be stored in (redirected to) a buffer, so it can be /re-used/ without copy-pasting from a terminal.
+
+This output, properly parsed, becomes the "source" for /selection/ and for further actions.
+
+Pipelining the output of commands into ediror buffers is essentially a Plan9 workflow (with the ~acme~) editor.
+
+grep
+
+the output of the ~grep~ command will be stored in a buffer.
+
+Hits from ‘M-x grep’ can be iterated through using `C-x `’. This runs Emacs command ‘next-error’.
+
+~M-x find-name-dired~ - search for filenames
+
+~M-x find-grep-dired~ - search for /contents/
+
+~M-x grep-find~
+~M-x find-grep~
+~M-x rgrep~
+Run grep via find, and collect output in the *grep* buffer.
+
+eshell
+
+The cool trick is to use replacements for commands like ~grep~ and ~find~ with the correrspondig Emacs internal /commands/ (interactive lisp functions) so that all the output will be properly parsed and stored in corresponding buffers.
+
+This is the rationale for using ~eshell~. It will use ~grep~, which in turn, will call ~rg~ -- several layers of redirection.
+
+workflows
+
+one "greps" inside a "project" (starting from its "root") with ~rg-project~ or ~ag-progect~
+
+even better (one more wrapping and an indirection) ~counsel-rg~ which will ask for a "root directory" (from where to start)
+
+~rg-project~ or ~ag-project~ will skip this question.
+
+
+Emacs is a /very/ large and complex system, so all the good (and bad) programming methodologies and principles can be seen within.
+
+The classic examples are ~plist~ and ~alist~ ADTs, which are not /"abstract"/ at all, and everyone has to check and maintain the required representation /invariants/ explicitly.
+
+A ~plist~ has to have an /even number of elements/, no duplicate "keys" and better to be /consistent/ about the /types/ of the elements. One has to use /getters and setters/ to maintain these invariants. There is also a /predicate/ ~plistp~ to check some of these.
+
+An ~alist~ is a list-of-pairs ("improper lists") which has its own set of constraints and invariants. It, of course, has its own set of /procedures/ (a module's /public interface/) too.
+
+Just like with /Common Lisp/, it is an /imperative language/, with little or no emphasis on pure functions and immutable data, so one has to pay careful attention to what modifies and rewrites what (procedures performing "destructive" updates).
+
+Generalization (abstraction out) into modules (modes) and code re-use.
+
+- ~fundamental-mode~
+   - Major mode: ~prog-mode~
+       - Minor mode: ~python-mode~
+   - ~comint-mode~
+       - Python shell - a /comint buffer/. (Inferior mode)
+
+Each /mode/ has its own set of /key bindings/, variables, and associated (internal) /functions/.
+
+- ~C-h m~ /describes/ a mode (by actually traversing its internal LIST structures).
+- ~C-h f~, and ~C-h v~ in turn, describe /functions/ ("commands") and /variables/.
+
+This suggests that we have to setup (with /hooks/ that set variables and /minor modes/) the more general ~prog-mode~ before all the /language-specific/ modes.
+
+There are so-called /global modes/ which handle /buffers of different kinds/  (~company~, ~yasnippet)~, etc.
+
+There are /major sub-systems/ within Emacs (indentation, completion, snippets, pretty-symbols) or even micro-frameworks (company, lsp).
+
+Since Emacs configuration is /imperative/, one has to pay careful attention to /the particular implicit order/ in which packages are being loaded and initialized.
+
+- ligatures
+- pretty-symbols (part of the ~prog-mode~, extended by ~tuareg~)
+- indentation according to the /mode/
+- company (a completion framework)
+- yasnippet (a snippets engine)
+
+A /programming language mode/ typically specifies the following:
+- syntax of expressions,
+- the customary rules for indentation,
+- how to do syntax highlighting for the language, and
+- how to find the beginning or end of a function definition.
+- features for compiling and
+- debugging programs
+
+Workflows
+
+write down a cheat-sheet for the most used /key bindings/
+
+Then everything is /discoverable/ and /self-documented/
+
++ each key binding can be examined with ~C-h k~
++ each /function/ or a "command" with ~C-h f~
++ each /mode/ can be examined with ~C-h m~
++ and each /variable/ with ~C-h v~
+
+The ~showkey-mode~ could log all the keys and the functions they /bound/ to
+The ~IELM~ is a REPL to run any LISP function or evaluate any expression
+
+the ~comint-mode~ (also ~eshell~)
+~C-c C-u~ comint-kill-input		    ^u
+~C-c C-w~ backward-kill-word		    ^w
+~C-c C-c~ comint-interrupt-subjob	    ^c
+
+~C-M-i~ completion-at-point
+
+evaluation
+~C-M-x~ python-shell-send-defun: Send the current defun to inferior Python process.
+~C-c C-c~ python-shell-send-buffer: Send the entire buffer to inferior Python process.
+~C-c C-e~ python-shell-send-statement: Send the statement at point to inferior Python process.
+~C-c C-l~ python-shell-send-file: Send FILE-NAME to inferior Python PROCESS.
+~C-c C-r~ python-shell-send-region: Send the region delimited by START and END to inferior Python process.
+~C-c C-s~ python-shell-send-string: Send STRING to inferior Python process.
+
+~M-p~	   comint-previous-input
+~M-n~	   comint-next-input
+~M-r~     comint-history-isearch-backward-regexp
+
+xref
+- ~M-.~
+- ~M-,~
+- ~C-M-.~
+
+movements
+- ~M-a~
+- ~M-e~
+- ~C-M-a~
+- ~C-M-e~
+- ~C-M-u~
+- ~C-M-d~
+
+- ~C-c C-d~ python-describe-at-point
+- ~C-c C-f~ python-eldoc-at-point
+
+~C-c C-z~ switch-to-shell
+
+use ~ipython~ as an inferior interpreter
+
+Shortcut	Function
+General Emacs Controls
+Ctrl + G	Cancel or suspend a command.
+Ctrl + G, then Ctrl + G, then Ctrl + G	Forcibly suspend a command.
+Ctrl + L	Refresh the current screen.
+Alt + X, then “recover session”	Restore any unsaved buffers.
+Ctrl + X, then Ctrl + C	Save all buffers and close Emacs.
+Alt + X, then “customize”	Open the built-in customization menu.
+File Manipulation
+Ctrl + X, then Ctrl + F	Open a File Buffer.
+Ctrl + X, then Ctrl + S	Save the current file in the buffer.
+Ctrl + X, then S	Save all files in buffer.
+Ctrl + X, then Ctrl + D	Open a Dired Buffer.
+Ctrl + X, then Ctrl + W	Write the current file to a different buffer.
+Ctrl + X, then Ctrl + Q	Turn the current buffer to Read-Only.
+Text Selection
+Alt + H	Select the paragraph before the cursor.
+Ctrl + Alt + H	Select the function before the cursor.
+Ctrl + X, then Ctrl + P	Select everything in the current screen.
+Ctrl + H	Select the entire buffer.
+Ctrl + Space	Activate the region select tool.
+Text Manipulation
+Ctrl + W	Cut the text within the selected region.
+Ctrl + D	Cut the character after the
+Ctrl + K	Cut the entire line after the cursor.
+Alt + K	Cut the entire sentence after the cursor.
+Alt + U	Convert the word before the cursor to uppercase.
+Ctrl + X, then Ctrl + U	Convert the selected region to uppercase.
+Alt + L	Convert the word before the cursor to lowercase.
+Ctrl + X, then Ctrl + L	Convert the selected region to lowercase.
+Ctrl + T	Switch the two adjacent letters before the cursor.
+Alt + T	Switch the two adjacent words before the cursor.
+Text Formatting
+Ctrl + O	Add a new line above the cursor.
+Ctrl + X, then Ctrl + O	Remove any empty lines around the cursor.
+Alt + \	Remove all spaces around the cursor.
+Alt + Q	Truncate the paragraph to the current column length.
+Ctrl + X, F	Set the current column length.
+Searching and Replacing
+Ctrl + S	Search for text after the cursor.
+Ctrl + R	Search for text before the cursor.
+Alt + P	Use the previously searched text for searching.
+Ctrl + Alt + S	Search for text after the cursor using regex.
+Ctrl + Alt + R	Search for text before the cursor using regex.
+M + %	Enter Emacs’ Interactive Replace menu.
+Buffer Movement
+Ctrl + F	Move the cursor one character forward.
+Ctrl + B	Move the cursor one character backward.
+Alt + F	Move the cursor one word forward.
+Alt + B	Move the cursor one word backward.
+Ctrl + N	Move the cursor one line down.
+Ctrl + P	Move the cursor one line up.
+Ctrl + V	Scroll the entire buffer screen down.
+Alt + V	Scroll the entire buffer screen up.
+Ctrl + E	Move the cursor to the end of the current line.
+Ctrl + A	Move the cursor to the start of the current line.
+Alt + E	Move the cursor to the end of the current sentence.
+Alt + A	Move the cursor to the start of the current sentence.
+Buffer Manipulation
+Ctrl + X, then 2	Split the current buffer horizontally.
+Ctrl + X, then 3	Split the current buffer vertically.
+Ctrl + X, then 4, then B	Open an existing buffer as a vertical split.
+Ctrl + X, then 4, then F	Open a file as a vertical split.
+Ctrl + X, then 4, then D	Open directory as a vertical split.
+Ctrl + X, then 1	Delete all other splits aside from the currently selected one.
+Ctrl + X, then 0	Delete the currently selected split.
+Ctrl + X, then B	Switch to a different buffer.
+Ctrl + X, then Ctrl + B	Print a list of all existing buffers.
+Command Buffer Controls
+?	Suggest potential completion options.
+Alt + P	Rewrite the previous command in the buffer.
+Alt + R	Search backwards through the command buffer history.
+Alt + F	Search forwards through the command buffer history.
+Shell Support
+Alt + X, then “term”	Open a VT100 Terminal Emulator.
+Alt + X, then “eshell”	Open an Emacs Lisp Terminal.
+Alt + !	Run a shell command from the command buffer.
+Alt + &	Run a shell command and fork the process to the background.
+Keyboard Macros
+Ctrl + X, then (	Create an Emacs keyboard macro.
+Ctrl + X, then )	Save an Emacs keyboard macro.
+Ctrl + X, then E	Run the last Emacs macro defined.
+Lisp-specific Functions
+Ctrl + X, then Ctrl + E	Run the currently selected Lisp expression.
+Ctrl + Alt + X	Run the currently selected a Lisp function.
+Emacs Help System
+Ctrl + H, then ?	Open a summary of all the options for the Help system.
+Ctrl + H, then A	Search for a specific Help topic.
+Ctrl + H, then F	Open a Help window about the highlighted Lisp function.
+Ctrl + H, then V	Open a Help window about the highlighted Lisp variable.
+Ctrl + H, then M	Open a Help window for the current Major Mode.
+Ctrl + H, then P	Search for an installed Emacs package.
+Ctrl + H, then Shift + P	Search for the documentation of an Emacs package.
+Ctrl + H, then I	Open the Emacs Info Screen.
+Ctrl + H, then Ctrl + F	Open the Emacs FAQ.
+Ctrl + H, then Ctrl + N	View the most recent news about Emacs.
+Emacs Info Screen
+H	Open the Info Screen tutorial.
+Space	Scroll down the currently displayed text by half a screen.
+Backspace	Scroll up the currently displayed text by half a screen.
+N	Go to the next Info node for the document.
+P	Go to the previous Info node for the document.
+T	Go to the top Info node for the document.
+D	Go to the document’s Table of Contents.
+L	Go back to the last Info node that you read.
+Q	Exit Emacs’ Info Screen Mode.
