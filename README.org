@@ -2,14 +2,111 @@
 #+SUBTITLE: Realizations, insights and a-ha moments about Emacs
 #+STARTUP: indent fold overview
 
-
-Proper discoveries and generalizations from the oldtimers - UNIX, Smalltalk, Genera, Plan9
+* Proper generalizations from the oldtimers - UNIX, Smalltalk, Genera, Plan9
 
 The most fundamental principles are still of /pipelining/ and of /transforming/ a strucrured text.
 
-It has been generalized from daily practices of running mundane tasks on a /terminal/, where ~ls~, ~find~ and ~grep~ were the main utilities.
+It has been generalized from daily practices of running mundane tasks on a /terminal/, where ~ls~, ~find~ and ~grep~ were the main utilities in the 80s and 90s.
 
 Notice that in the old time there were no way to easily copy and paste struff around, so they used temporary filles, which later became an editor buffers. This is actually a /big deal/.
+
+* The motivating example.
+Consider the following Emacs "command":
+#+BEGIN_QUOTE
+Signature
+(find-grep COMMAND-ARGS)
+
+Documentation
+Run grep via find, with user-specified args COMMAND-ARGS.
+
+Collect output in the "*grep*" buffer.
+#+END_QUOTE
+It uses the UNIX command ~find~ and then pipes its output to ~grep~ and then collects /its parsed/ output into the buffer named ~*grep*~. No /temp files/, no need to copy-paste from the terminal window, each line is a "clickable" reference to particular position in a file at which the /match/ occur.
+
+These two lines change the implementation of this command without affecting any interfaces and calling conventions.
+#+begin_src elisp :tangle no
+(when (executable-find "fd")
+  (setq find-program "fd"))
+#+end_src
+
+There is a /classic example/
+#+begin_src emacs-lisp :tangle yes
+(when (executable-find "rg")
+  (setq grep-program "rg")
+  (grep-apply-setting
+   'grep-find-command
+     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
+#+end_src
+The first two lines change the implementation of the ~grep-find~ "command" (which is an "interactive" Lisp procedure (assuming it understand the /traditional/ command line arguments).
+
+The following lines specify an /alternative implementation/ for the "standard" ~grep-find~ command. Again, no visible changes /at the use side/.
+
+The cool part is that this command is used in ~eshell~  by /shadowing/ (which is a classic PLT concept) the UNIX ~grep~ command and running the Lisp procedure instead, which collets and parses the output into the ~*grep*~ buffer.
+
+There are lots of nice subtle hacks going on together -- wrapping of executables, pipelining of the output, clever shadowing of a standard symbol (name), and redirecting, parsing and indexing (making "clickable") of the output.
+
+This is the /golden standard/, and there are several fundamental principles /manifest itselves/, from UNIX, Smalltalk and Plan9.
+
+Just open ~M-x eshell~ window and type something like
+#+begin_src eshell :tangle yes
+grep "rg$" .emacs.d/init.el
+#+end_src
+and see what would happen.
+
+* Another a-ha moment
+Right now we are going through the "LSP revolution" -- most of the old-school /ad-hoc/ tools are getting replased and even somehow "standardized" at the level of programmer's interfaces (client APIs).
+
+It is a "classic" /client-server/ architecture with a standardized (but unnecessary complex) protocol in between -- the universal (as Internet itself) way to do the right things.
+
+The point is that the server does all the "heavy lifting" of parsing, indexing (cross-referencing) and maintaining a database of symbols (identificators) which used to be done at the client size with various /ad-hoc/ solutions and tools.
+
+It would be not a big deal, if not a single clever hack -- good (well-designed) language servers use the compiler's "infrastructure" which is provided as a set of "hight level" libraries -- the compiler's code is being /reused/ for everything (via some API).
+
+~clangd~ does this, and following it many others do.
+#+begin_example
+ $ ldd `which clangd`
+	linux-vdso.so.1 (0x00007ffff7b31000)
+	libclang-cpp.so.16+libcxx => /usr/lib/llvm/16/bin/../lib64/libclang-cpp.so.16+libcxx (0x00007fb9b8b07000)
+	libLLVM-16+libcxx.so => /usr/lib/llvm/16/bin/../lib64/libLLVM-16+libcxx.so (0x00007fb9b1280000)
+	libc++.so.1 => /usr/lib64/libc++.so.1 (0x00007fb9b1155000)
+	libc++abi.so.1 => /usr/lib64/libc++abi.so.1 (0x00007fb9b1112000)
+	libm.so.6 => /lib64/libm.so.6 (0x00007fb9b1038000)
+	libunwind.so.8 => /usr/lib64/libunwind.so.8 (0x00007fb9b101b000)
+	libc.so.6 => /lib64/libc.so.6 (0x00007fb9b0e41000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007fb9bf025000)
+	libffi.so.8 => /usr/lib64/libffi.so.8 (0x00007fb9b0e34000)
+	libz3.so.4.12 => /usr/lib64/libz3.so.4.12 (0x00007fb9af729000)
+	libz.so.1 => /lib64/libz.so.1 (0x00007fb9af70a000)
+	libzstd.so.1 => /lib64/libzstd.so.1 (0x00007fb9af61a000)
+	libtinfo.so.6 => /lib64/libtinfo.so.6 (0x00007fb9af5d4000)
+	libgcc_s.so.1 => /usr/lib/gcc/x86_64-pc-linux-gnu/13/libgcc_s.so.1 (0x00007fb9af5ae000)
+	liblzma.so.5 => /lib64/liblzma.so.5 (0x00007fb9af578000)
+	libgmp.so.10 => /usr/lib64/libgmp.so.10 (0x00007fb9af4c9000)
+#+end_example
+Notice this ~libclang-cpp.so.16~ -- this is the interface to the compiler.
+
+So, all you need to do nowadays is to set up the ~lsp-mode~, which is a LSP /client/, and the ~lsp-ui~ package, which is, well, a /user interface/.
+#+begin_src elisp :tangle no
+(yas-global-mode)
+(which-key-mode)
+
+(add-hook 'c-mode-hook 'lsp)
+(add-hook 'c++-mode-hook 'lsp)
+
+(with-eval-after-load 'lsp-mode
+  (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
+#+end_src
+and /wallah/, just like that...
+
+~lsp-mode~ does not re-implement the wheel, and /re-uses/ ~eldoc, xref~ and ~company-mode~, and "standard" ~flycheck~ "microframework". There is also support for ~ivy~.
+
+Make sure you get it -- everything good and "standard" has been re-used, and the most tricky and difficult parts were "offloaded" (delegated) via /server/ to the compiler.
+
+This is how to do proper, principle-guided software engineering.
+
+Same "revolution" is going on in the /neovim/ world.
+
+* more blah-blah
 
 dired
 
