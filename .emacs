@@ -515,6 +515,101 @@
   (require 'ansi-color)
   (ansi-color-apply-on-region (point-min) (point-max)))
 
+(use-package ispell
+  :straight (:type built-in)
+  :demand
+  :config
+  (add-to-list 'ispell-extra-args "-C")
+  (add-to-list 'ispell-extra-args "--sug-mode=ultra")
+  (setq ispell-encoding-command "utf-8")
+  (setq ispell-skip-html t))
+
+(use-package flyspell
+  :straight (:type built-in)
+  :demand
+  :hook ((text-mode . flyspell-mode)
+         (prog-mode . flyspell-prog-mode))
+  :config
+  (setq flyspell-issue-message-flag nil)
+  (setq flyspell-large-region t)
+  (setq flyspell-consider-dash-as-word-delimiter-flag t)
+  (add-to-list 'flyspell-prog-text-faces 'nxml-text-face)
+  (flyspell-mode t))
+
+(use-package spell-fu
+  :config (global-spell-fu-mode t))
+
+(use-package sgml-mode
+  :hook
+  ((html-mode . sgml-electric-tag-pair-mode)
+   (html-mode . sgml-name-8bit-mode))
+  :custom
+  (sgml-basic-offset 2)
+  :config
+  (setq sgml-xml-mode t)
+  (setq sgml-transformation-function 'upcase)
+  (setq sgml-set-face t)
+  (setq sgml-auto-activate-dtd t)
+  (setq sgml-indent-data t))
+
+(setq sgml-markup-faces '(
+    (start-tag . font-lock-keyword-face)
+    (end-tag . font-lock-keyword-face)
+    (comment . font-lock-comment-face)
+    (pi . font-lock-constant-face) ;; <?xml?>
+    (sgml . font-lock-type-face)
+    (doctype . bold)
+    (entity . italic)
+    (shortref . font-lock-reference-face)))
+
+(use-package tidy
+  :config
+  (setq sgml-validate-command "tidy"))
+
+(use-package tagedit
+  :hook (sgml-mode . tagedit-mode )
+  :config
+  (with-eval-after-load 'sgml-mode
+    (tagedit-add-paredit-like-keybindings)
+    (define-key tagedit-mode-map (kbd "M-?") nil)
+    (define-key tagedit-mode-map (kbd "M-s") nil)))
+
+(use-package nxml-mode
+  :straight (:type built-in)
+  :init
+  (fset 'xml-mode 'nxml-mode)
+  (fset 'html-mode 'nxml-mode)
+  :config
+  (setq nxml-child-indent 2)
+  (setq nxml-attribute-indent 2)
+  (setq nxml-auto-insert-xml-declaration-flag nil)
+  (setq nxml-bind-meta-tab-to-complete-flag t)
+  (setq nxml-slash-auto-complete-flag t))
+
+(defun tidy-html ()
+  "Tidies the HTML content in the buffer using `tidy'"
+  (interactive)
+  (shell-command-on-region
+   ;; beginning and end of buffer
+   (point-min)
+   (point-max)
+   ;; command and parameters
+   "tidy -i -w 120 -q"
+   ;; output buffer
+   (current-buffer)
+     ;; replace?
+   t
+   ;; name of the error buffer
+   "*Tidy Error Buffer*"
+   ;; show error buffer?
+   t))
+
+;; an outdated but cool
+(straight-use-package 'nxhtml)
+
+(straight-use-package 'htmlize)
+(straight-use-package 'engrave-faces)
+
 ;; Use the latest version
 (straight-use-package 'org-contrib)
 
@@ -680,8 +775,14 @@
   :config
   (setq org-hugo-front-matter-format "yaml"))
 
+(use-package ox-html
+  :straight (:type built-in)
+  :after ox
+  :config
+  (setq org-html-coding-system 'utf-8-unix))
+
 (use-package ox-hugo
-  :after org)
+  :after ox)
 
 (use-package guru-mode
   :demand t
@@ -2081,3 +2182,9 @@ delete."
                               "basic+search")))))))
 
 (define-key lisp-mode-map (kbd "C-c l") 'lispdoc)
+
+(use-package showkey
+  :commands showkey-mode)
+
+(use-package smartscan
+  :config (global-smartscan-mode t))
