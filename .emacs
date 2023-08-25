@@ -1,10 +1,13 @@
-;;; -*- mode: emacs-lisp; coding: utf-8; -*-
+;;; -*- mode: emacs-lisp; lexical-binding: t; coding: utf-8; -*-
 
 ;; use hooks and implicit defers,
 ;; not afters and configs
 ;; some packages work only as modes in configs
 
 (setq-default load-prefer-newer t)
+
+;; a temporary kludge
+(setq-default user-emacs-directory "/home/lngnmn2/.emacs1.d/")
 
 (setq byte-compile-warnings t)
 (setq native-comp-async-report-warnings-errors nil)
@@ -74,44 +77,57 @@
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
 
-
 (setq straight-use-package-by-default t)
 (setq straight-vc-git-default-clone-depth 1)
 
+;; we will use this DSLs (a set of macros)
+(setq use-package-always-defer t
+      use-package-always-ensure t
+      use-package-compute-statistics t
+      use-package-verbose t)
+
 ;; use-package will use 'straight
-(straight-use-package '(bind-key :type built-in))
 (straight-use-package '(use-package :type built-in))
+(straight-use-package '(bind-key :type built-in))
 (straight-use-package 'diminish)
 (straight-use-package 'delight)
 
-;; we will use this DSLs (a set of macros)
-(setq
- use-package-always-defer nil   ;; should be nil for :defer to work
- use-package-always-ensure t    ;; should be t for straight
- use-package-compute-statistics t
- use-package-verbose t)
+(straight-use-package 'async)
+(use-package ob-async
+  :hook (org-load . (lambda () (require 'ob-async))))
 
-(menu-bar-mode t)
+;; less distractions
+(use-package emacs
+  :init
+  (menu-bar-mode t)
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+  (fringe-mode -1)
+  :config
+  (setq use-file-dialog nil
+        use-dialog-box nil)
+  (setq inhibit-splash-screen t
+        inhibit-startup-buffer-menu t
+        inhibit-startup-message t
+        inhibit-startup-echo-area-message t
+        inhibit-startup-screen t
+        initial-scratch-message "")
+  (setq x-underline-at-descent-line t
+        underline-minimum-offset 1)
+  (pixel-scroll-precision-mode 1)
+  (setq pixel-scroll-precision-large-scroll-height 35.0)
+  (setq-default font-use-system-font t
+                font-lock-maximum-decoration t)
+  (global-font-lock-mode t))
 
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-(fringe-mode -1)
+;; selection
+(use-package emacs
+  :config
+  (setq select-enable-clipboard t
+        select-enable-primary t))
 
-(setq x-underline-at-descent-line t)
-(setq underline-minimum-offset 1)
-
-(setq use-file-dialog nil
-      use-dialog-box nil
-      inhibit-splash-screen t)
-
-(setq select-enable-clipboard t
-      select-enable-primary t)
-
+;; the font section
 (add-to-list 'default-frame-alist '(font . "SF Mono Light 16"))
-
-(setq-default font-use-system-font t)
-(setq-default font-lock-maximum-decoration t)
-(global-font-lock-mode t)
 
 (set-face-font 'default  (font-spec :family "SF Mono" :foundry "APPL" :weight 'light :size 22 :height 158))
 
@@ -139,36 +155,23 @@
 (set-fontset-font t 'unicode (font-spec :family "Noto Emoji") nil 'prepend)
 (set-fontset-font t 'devanagari (font-spec :family "Noto Sans Devanagari"))
 
-(pixel-scroll-precision-mode 1)
-(setq pixel-scroll-precision-large-scroll-height 35.0)
-
 (setq find-file-visit-truename t)
 (setq vc-follow-symlinks t)
 
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(use-package emacs
+  :config
+  (setq-default indent-tabs-mode nil)
+  (setq-default tab-always-indent 'complete)
 
-(setq-default indent-tabs-mode nil)
-(add-hook 'sh-mode-hook (lambda () (setq indent-tabs-mode t)))
+  (add-hook 'sh-mode-hook (lambda () (setq indent-tabs-mode t)))
 
-(setq-default tab-always-indent 'complete)
+  (define-key completion-in-region-mode-map (kbd "C-p") #'minibuffer-previous-completion)
+  (define-key completion-in-region-mode-map (kbd "C-n") #'minibuffer-next-completion)
 
-(define-key completion-in-region-mode-map (kbd "C-p") #'minibuffer-previous-completion)
-(define-key completion-in-region-mode-map (kbd "C-n") #'minibuffer-next-completion)
-
-(global-set-key (kbd "RET") 'newline-and-indent)
-
-(global-set-key (kbd "C-y") 'yank)
-(global-set-key (kbd "M-y") 'yank-pop)
-
-(setq inhibit-startup-screen t)
-(setq initial-scratch-message "")
-(setq inhibit-splash-screen t)
-(setq inhibit-startup-buffer-menu t)
-(setq inhibit-startup-message t)
-(setq inhibit-startup-echo-area-message t)
-
-(setq-default font-use-system-font t)
-(setq-default font-lock-maximum-decoration t)
+  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+  (global-set-key (kbd "RET") 'newline-and-indent)
+  (global-set-key (kbd "C-y") 'yank)
+  (global-set-key (kbd "M-y") 'yank-pop))
 
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
@@ -375,20 +378,6 @@
   :config
   (diminish 'whitespace-cleanup-mode))
 
-;; a nice hack
-(use-package grep
-  :straight '(:type built-in)
-  :init
-  (setq-default grep-highlight-matches t
-                grep-scroll-output t)
-  :config
-  (when (executable-find "rg")
-    (setq grep-program "rg")
-    (grep-apply-setting
-     'grep-find-command
-     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
-    (global-set-key (kbd "C-x C-g") 'grep-find)))
-
 ;; (defun colorize-compilation-buffer ()
 ;;   "Enable colors in the *compilation* buffer."
 ;;   (require 'ansi-color)
@@ -498,8 +487,8 @@
   :straight t
   :hook (after-init . global-emojify-mode)
   :config
-  (setq emojify-styles)
-  (emojify-set-emoji-styles emojify-styles))
+  (setq emojify-emoji-styles 'unicode)
+  (emojify-set-emoji-styles emojify-emoji-styles))
 
 (use-package mixed-pitch
   :straight t
@@ -527,12 +516,10 @@
   (ansi-color-apply-on-region (point-min) (point-max)))
 
 ;; Use the latest version
-(straight-use-package 'org)
 (straight-use-package 'org-contrib)
 
 (straight-use-package 'async)
 (use-package ob-async
-  :straight t
   :hook (org-load . (lambda () (require 'ob-async))))
 
 ;; load this early
@@ -561,7 +548,6 @@
    ))
 
 (use-package org
-  :straight t
   :custom
   (org-src-tab-acts-natively t)
   :hook (org-mode . (lambda ()
@@ -644,15 +630,12 @@
   (setq-local prettify-symbols-unprettify-at-point 'right-edge))
 
 (use-package org-fragtog
-  :straight t
   :hook (org-mode . org-fragtog-mode))
 
-(use-package ef-themes
-  :straight t
-  :defer t)
+(straight-use-package 'ef-themes)
 
 (use-package doom-themes
-  :straight t
+  :demand t
   :hook (after-init . (lambda ()
                         (load-theme 'doom-nord t)))
   :hook (org-mode . (lambda ()
@@ -665,26 +648,24 @@
   (load-theme 'doom-nord t))
 
 (use-package solaire-mode
-  :straight t
+  :demand t
   :hook (mixed-pitch-mode .  solaire-mode-reset)
   :hook (prog-mode . solaire-mode-reset)
   :hook (after-init . (lambda ()
                         (solaire-global-mode +1))))
 
 (use-package org-modern
-  :straight t
   :hook (org-mode . org-modern-mode)
   :config
   (setq org-modern-table t)
   (setq org-modern-star '("◉" "○" "✸" "✿" "✤" "✜" "◆" "▶")))
 
 (use-package org-reverse-datetree
-  :straight t
   :after org
   :demand)
 
 (use-package org-appear
-  :straight t
+  :demand t
   :hook (org-mode . org-appear-mode)
   :config
   (setq org-appear-autoemphasis t
@@ -695,39 +676,32 @@
   (run-at-time nil nil #'org-appear--set-elements))
 
 (use-package ox-clip
-  :straight t
   :after org
   :config
   (setq org-hugo-front-matter-format "yaml"))
 
 (use-package ox-hugo
-  :straight t
   :after org)
 
 (use-package guru-mode
-  :straight t
+  :demand t
   :delight
-  :config
-  (guru-global-mode t))
+  :config (guru-global-mode t))
 
 (use-package nyan-mode
-  :straight t
+  :demand t
   :config
   (setq nyan-animate-nyancat t)
   (setq nyan-wavy-trail t)
   (nyan-mode t))
 
 (use-package hide-mode-line
-  :straight t
-  :config
-  (hide-mode-line-mode t))
+  :config (hide-mode-line-mode t))
 
 (use-package focus
-  :straight t
   :commands (focus-mode focus-read-only-mode))
 
 (use-package writeroom-mode
-  :straight t
   :commands writeroom-mode)
 
 (use-package org-indent
@@ -736,53 +710,43 @@
   :hook (org-mode . org-indent-mode))
 
 (use-package org-rich-yank
-  :straight t
+  :after org
   :bind (:map org-mode-map
               ("C-M-y" . org-rich-yank)))
 
 (use-package org-cliplink
-  :straight t
   :after org)
 
 (use-package org-download
-  :straight t
   :after org)
 
 (use-package org-web-tools
-  :straight t
   :after org)
 
 (use-package idle-org-agenda
   :after org-agenda
-  :straight t
+  :demand t
   :config (idle-org-agenda-mode))
 
-(use-package info+
-  :straight t)
+(straight-use-package 'info+)
 
 (use-package info-colors
-  :straight t
   :hook (Info-selection  . info-colors-fontify-node))
 
 (use-package which-key
-  :straight t
   :diminish
-  :config
-  (which-key-mode t))
+  :config(which-key-mode t))
 
 (use-package which-key-posframe
-  :straight t
   :init (which-key-posframe-mode t))
 
 (use-package xclip
-  :straight t
+  :demand t
   :config
   (setq select-enable-primary t)
   (xclip-mode t))
 
 (use-package pdf-tools
-  :straight t
-  :defer t
   :mode ("\\.pdf\\'" . pdf-view-mode)
   :magic ("%PDF" . pdf-view-mode)
   :config
@@ -792,13 +756,9 @@
   (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode))
 
 (use-package saveplace-pdf-view
-  :straight t
-  :defer t
-  :after pdf-view)
+  :after pdf-view-mode)
 
 (use-package markdown-mode
-  :straight t
-  :defer t
   :init
   (setq markdown-command "multimarkdown")
   (setq markdown-enable-math t
@@ -820,21 +780,17 @@
          ("\\.markdown\\'" . markdown-mode)))
 
 (use-package poly-markdown
-  :straight t
   :after markdown-mode
   :hook (markdown-mode . poly-markdown-mode))
 
 (use-package grip-mode
-  :straight t
   :hook (markdown-mode . grip-mode))
 
 (use-package ox-gfm
-  :straight t
   :commands (org-gfm-export-as-markdown org-gfm-export-to-markdown)
   :after org)
 
 (use-package vterm
-  :straight t
   :hook (vterm-mode . yas-minor-mode)
   :commands (vterm vterm-other-window)
   :config
@@ -855,7 +811,6 @@
 ;;       '("chromium" "--headless" "--dump-dom"))
 
 (use-package w3m
-  :straight t
   :commands (w3m w3m-browse-url)
   :config
   (setq w3m-quick-start nil)
@@ -868,7 +823,7 @@
 (use-package xwwp
   :straight (xwwp :type git :host github :repo "canatella/xwwp")
   :commands (xwwp)
-  :custom
+  :config
   (setq xwwp-follow-link-completion-system 'ivy))
 
 (defun google-suggest ()
@@ -899,75 +854,79 @@
                                   (1- (match-end 0)) (point)))))))
 
 (use-package google-this
-  :straight t
   :diminish 'google-this-mode
-  :config
-  (google-this-mode 1))
+  :config (google-this-mode 1))
 
 (global-set-key (kbd "C-c ;") #'comment-line)
 
 (use-package xref
-  :straight t
   :config
   (setq xref-show-definitions-function #'xref-show-definitions-completing-read
         xref-show-xrefs-function #'xref-show-definitions-completing-read)
   (setq xref-search-program 'ripgrep))
 
 (use-package dumb-jump
-  :straight t
   :after xref
   :config
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
 (use-package avy
-  :straight t
-  :defer t)
+  :bind ("C-:" . #'avy-goto-char)
+        ("C-'" . #'avy-goto-char-2)
+        ("M-g f" . #'avy-goto-line)
+        ("M-g w" . 'avy-goto-word-1))
 
-(use-package rg
-  :straight t)
+(use-package avy-menu
+  :after avy)
 
-(use-package fzf
-  :straight t)
-
-(use-package ag
-  :straight t)
+(straight-use-package 'rg)
+(straight-use-package 'fzf)
+(straight-use-package 'ag)
 
 (use-package ripgrep
-  :straight t
-  :defer t)
+  :commands ripgrep-regexp)
 
 (use-package deadgrep
-  :straight t
-  :defer t)
+  :commands deadgrep)
 
 (use-package wgrep
-  :straight t
   :commands wgrep-change-to-wgrep-mode
   :config
   (define-key grep-mode-map (kbd "w") 'wgrep-change-to-wgrep-mode)
   (setq wgrep-auto-save-buffer t))
 
+;; a nice hack
+(use-package grep
+  :straight '(:type built-in)
+  :init
+  (setq-default grep-highlight-matches t
+                grep-scroll-output t)
+  :config
+  (when (executable-find "rg")
+    (setq grep-program "rg")
+    (grep-apply-setting
+     'grep-find-command
+     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
+    (global-set-key (kbd "C-x C-g") 'grep-find)))
+
 (setq completions-format 'one-column) ;; like ido
 (setq completion-styles '(flex basic partial-completion emacs22))
-
-(use-package orderless
-  :straight t
-  :config
-  (add-to-list 'completion-styles 'orderless)
-  (setq orderless-component-separator "[ &]")
-
-  :custom
-  (completion-category-overrides '((file (styles basic partial-completion)))))
 
 (unless (version< emacs-version "29.0")
   (setq completion-auto-help 'visible
         completion-auto-select 'second-tab
         completion-show-help t
-        completions-sort nil
+        completions-sort t
         completions-header-format nil))
 
+(use-package orderless
+  :config
+  (add-to-list 'completion-styles 'orderless)
+  (setq orderless-component-separator "[ &]")
+  :custom
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
 (use-package projectile
-  :straight t
   :hook (after-init . projectile-mode)
   :init
   (setq-default projectile-generic-command "rg --files --hidden -0")
@@ -975,16 +934,12 @@
   (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
 
 (use-package ibuffer-projectile
-  :straight t)
+  :after projectile)
 
 ;; will be loaded by ivy
-(use-package flx
-  :straight t
-  :defer t)
+(straight-use-package 'flx)
 
 (use-package ivy
-  :straight t
-  :demand t
   :diminish
   :hook (after-init . ivy-mode) ;; another kludge
   :bind
@@ -1031,9 +986,8 @@
 
 ;; this is such a cool embedded DLS
 (use-package counsel
-  :straight t
-  :defer t
   :diminish
+  :after ivy
   :bind
   (([remap apropos]                .  #'counsel-apropos)
    ([remap bookmark-jump]          .  #'counsel-bookmark)
@@ -1082,9 +1036,8 @@
   (counsel-mode t))
 
 (use-package ivy-rich
-  :straight t
+  :demand
   :after ivy
-  ;; :hook (ivy-mode . ivy-rich-mode)
   :init
   (setq ivy-rich-path-style 'abbrev
         ivy-virtual-abbreviate 'full)
@@ -1094,25 +1047,24 @@
   (ivy-rich-mode t))
 
 (use-package all-the-icons-ivy
-  :straight t
+  :demand
   :after ivy
   :config
   ;; (setq all-the-icons-ivy-buffer-commands nil)
   (all-the-icons-ivy-setup))
 
 (use-package all-the-icons-ivy-rich
-  :straight t
+  :demand
   :after ivy-rich
   :init (all-the-icons-ivy-rich-mode 1))
 
 (use-package prescient
-  :straight t
   :demand t
   :config (prescient-persist-mode +1))
 
 ;; lots of Doom Emacs hacks. a nasty bug with :init instead of :config
+;; TODO: try to remove prescient and use flx only
 (use-package ivy-prescient
-  :straight t
   :commands +ivy-prescient-non-fuzzy
   :hook (ivy-mode . ivy-prescient-mode)
   :hook (ivy-prescient-mode . prescient-persist-mode)
@@ -1131,13 +1083,11 @@
                counsel-outline counsel-org-goto counsel-jq)
         ivy-prescient-retain-classic-highlighting t))
 
-(use-package doom-todo-ivy
-  :straight (:host github :repo "jsmestad/doom-todo-ivy")
-  :hook (after-init . doom-todo-ivy))
+;; (use-package doom-todo-ivy
+;;   :straight (:host github :repo "jsmestad/doom-todo-ivy")
+;;   :hook (after-init . doom-todo-ivy))
 
 (use-package counsel-projectile
-  :straight t
-  :defer t
   :bind
   (([remap projectile-find-file] . #'+ivy/projectile-find-file)
    ([remap projectile-find-dir]  . #'counsel-projectile-find-dir)
@@ -1151,7 +1101,6 @@
   (setq counsel-projectile-sort-files t))
 
 (use-package counsel-web
-  :straight t
   :after counsel
   :config
   (setq counsel-web-search-action #'eww-browse-url)
@@ -1166,11 +1115,9 @@
   (global-set-key (kbd "C-c w") counsel-web-map))
 
 (use-package counsel-gtags
-  :straight t
-  :defer t)
+  :after counsel)
 
 (use-package counsel-etags
-  :straight t
   :bind (("C-]" . counsel-etags-find-tag-at-point))
   :init
   (add-hook 'prog-mode-hook
@@ -1182,11 +1129,9 @@
   (push "build" counsel-etags-ignore-directories))
 
 (use-package counsel-test
-  :straight t
-  :defer t)
+  :after counsel)
 
 (use-package counsel-tramp
-  :straight t
   :defer t
   :config
   (setq tramp-default-method "ssh")
@@ -1211,11 +1156,9 @@
 ;;           (min-height . ,ivy-height))))
 
 (use-package ivy-avy
-  :straight t
   :after ivy)
 
 (use-package ivy-xref
-  :straight t
   :init
   (setq xref-prompt-for-identifier '(not xref-find-definitions
                                          xref-find-definitions-other-window
@@ -1226,8 +1169,6 @@
   (setq xref-show-xrefs-function #'ivy-xref-show-xrefs))
 
 (use-package swiper
-  :straight t
-  :defer t
   :bind (("C-s" . swiper-isearch)
          ("C-r" . swiper-isearch-backward)
          ("M-s s" . swiper)
@@ -1237,7 +1178,6 @@
   (setq swiper-action-recenter t))
 
 (use-package helpful
-  :straight t
   :after counsel
   :bind
   ([remap describe-function] . helpful-callable)
@@ -1249,10 +1189,6 @@
   (defalias 'describe-command 'helpful-command)
   (defalias 'describe-variable 'helpful-variable)
   (defalias 'describe-key 'helpful-key)
-  ;; (global-set-key (kbd "C-h f") #'helpful-callable)
-  ;; (global-set-key (kbd "C-h v") #'helpful-variable)
-  ;; (global-set-key (kbd "C-h k") #'helpful-key)
-  ;; (global-set-key (kbd "C-h x") #'helpful-command)
   (setq counsel-describe-function-function #'helpful-callable)
   (setq counsel-describe-variable-function #'helpful-variable)
   (setq counsel-descbinds-function #'helpful-callable)
@@ -1260,22 +1196,17 @@
   (global-set-key (kbd "C-h F") #'helpful-function))
 
 (use-package ace-link
-  :straight t
-  :config
-  (ace-link-setup-default))
+  :config (ace-link-setup-default))
 
 (use-package rainbow-delimiters
-  :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
-  :config
-  (rainbow-delimiters-mode t))
+  :config (rainbow-delimiters-mode t))
 
 (use-package smartparens
-  :straight t
+  :demand
   :diminish
+  :hook (after-init . smartparens-global-strict-mode)
   :hook (prog-mode . turn-on-smartparens-strict-mode)
-  :init
-  (smartparens-global-strict-mode t)
   :config
   (require 'smartparens-config))
 
@@ -1287,7 +1218,7 @@
 (add-hook 'minibuffer-setup-hook 'conditionally-enable-smartparens-mode)
 
 (use-package company
-  :straight t
+  :demand
   :commands (company-complete-common
              company-complete-common-or-cycle
              company-manual-begin
@@ -1315,33 +1246,29 @@
           )))
 
 (use-package company-prescient
-  :straight t
   :hook (company-mode . company-prescient-mode)
   :hook (company-prescient-mode . prescient-persist-mode))
 
 (use-package company-posframe
-  :straight t
   :diminish
   :hook (company-mode . company-posframe-mode)
   :config
   (setq company-tooltip-minimum-width 40))
 
 (use-package company-quickhelp
-  :straight t
   :custom
   (company-quickhelp-delay 3)
   :hook (company-mode . company-quickhelp-mode))
 
 (use-package company-math
-  :straight t
+  :after company
   :config
   (setq company-math-disallow-unicode-symbols-in-faces t)
-  ;;(add-to-list 'company-backends 'company-math-symbols-latex)
-  (append '(company-math-symbols-latex company-math-symbols-unicode)
-          company-backends))
+  (add-to-list 'company-backends 'company-math-symbols-latex)
+  (add-to-list 'company-backends 'company-math-symbols-unicode))
 
 (use-package company-org-block
-  :straight t
+  :after company
   :custom
   (company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
   :hook (org-mode . (lambda ()
@@ -1349,24 +1276,22 @@
                       (company-mode +1))))
 
 (use-package company-statistics
-  :straight t
-  :config
-  (company-statistics-mode))
+  :after company
+  :config (company-statistics-mode))
 
 (use-package company-web
-  :straight t
+  :after company
   :config
   :hook (nxml-mode . (lambda ()
                        (add-to-list 'company-backends 'company-web-html))))
 
 (use-package flycheck
-  :straight t
+  :demand
   :diminish
-  :init
-  (global-flycheck-mode t))
+  :hook (after-init . global-flycheck-mode)
+  :config (global-flycheck-mode t))
 
 (use-package flycheck-pos-tip
-  :straight t
   :hook (flycheck-mode . flycheck-pos-tip-mode))
 
 (setq flycheck-check-syntax-automatically '(save
@@ -1378,29 +1303,30 @@
     '(flycheck-display-errors-function #'flycheck-pos-tip-error-messages)))
 
 (use-package avy-flycheck
-  :straight t
   :after flycheck
-  :config
-  (avy-flycheck-setup))
+  :config (avy-flycheck-setup))
 
 (use-package yasnippet
-  :straight t
+  :demand
   :diminish
   :after company
+  :hook (adfter-init . (lambda ()
+                         (interactive)
+                         (yas-global-mode t)
+                         (yas-reload-all)))
   :config
   (push 'company-yasnippet company-backends)
   (yas-global-mode t))
 
 (use-package yasnippet-snippets
-  :after yasnippet
-  :straight t)
+  :after yasnippet)
 
 (use-package doom-snippets
   :after yasnippet
   :straight (doom-snippets :type git :host github :repo "doomemacs/snippets" :files ("*.el" "*")))
 
+;; TODO: convert to :bind
 (use-package auto-yasnippet
-  :straight t
   :after yasnippet
   :config
   (global-set-key (kbd "C-c C-y w")   #'aya-create)
@@ -1414,7 +1340,6 @@
   (global-set-key (kbd "C-c C-y o")   #'aya-open-line))
 
 (use-package lsp-mode
-  :straight t
   :diminish
   :hook (prog-mode . lsp)
   :hook (lsp-completion-mode . (lambda ()
@@ -1435,7 +1360,6 @@
   (push 'company-lsp company-backends))
 
 (use-package lsp-ui
-  :straight t
   :hook (prog-mode . lsp-ui-mode)
   :init
   (setq lsp-auto-configure t)
@@ -1459,7 +1383,6 @@
   (setq lsp-ui-doc-show-with-cursor t))
 
 (use-package lsp-ivy
-  :straight t
   :commands lsp-ivy-workspace-symbol lsp-ivy-global-workspace-symbol)
 
 (add-hook 'prog-mode-hook
@@ -1469,7 +1392,7 @@
             (setq indicate-empty-lines t)
             (set-fill-column 72)
             (auto-fill-mode t)
-            (electric-pair-mode t)
+            (electric-pair-mode -1)
             (electric-indent-mode t)
             (abbrev-mode t)))
 
@@ -1490,26 +1413,22 @@
              (local-set-key "\C-c\C-s" 'semantic-ia-show-summary)
              (push 'company-semantic company-backends)))
 
-(use-package google-c-style
-  :defer t)
+(straight-use-package 'google-c-style)
 
 (use-package clang-format
   :commands clang-format)
 
 (use-package rainbow-mode
-  :straight t
   :config (rainbow-mode t))
 
 (use-package electric-spacing
-  :straight t
   :hook (prog-mode . electric-spacing-mode))
 
 (use-package aggressive-indent
-  :straight t
+  :diminish
   :config (global-aggressive-indent-mode t))
 
 (use-package hl-todo
-  :straight t
   :hook ((org-mode prog-mode) . hl-todo-mode)
   :hook (yaml-mode . hl-todo-mode)
   :config
@@ -1526,7 +1445,7 @@
           ("XXX" font-lock-constant-face bold))))
 
 (use-package diff-hl
-  :straight t
+  :after magit
   :hook
   ((magit-pre-refresh . diff-hl-magit-pre-refresh)
    (magit-post-refresh . diff-hl-magit-post-refresh))
@@ -1537,36 +1456,31 @@
   (global-diff-hl-mode t))
 
 (use-package expand-region
-  :straight t
   :config (global-set-key (kbd "C-=") 'er/expand-region))
 
 (use-package ggtags
-  :straight t
-  :diminish
+  :diminish 'ggtags-mode
   :hook (prog-mode . ggtags-mode)
   :config (push 'company-gtags company-backends))
 
 (use-package counsel-gtags
-  :straight t
   :init
   (setq counsel-gtags-ignore-case t
         counsel-gtags-auto-update t)
   :hook (ggtags-mode . counsel-gtags-mode))
 
 (use-package volatile-highlights
-  :straight t
+  :diminish 'volatile-highlights-mode
   :hook (after-init . volatile-highlights-mode))
 
-(use-package  highlight-indent-guides
-  :straight t
-  :diminish
+(use-package highlight-indent-guides
+  :diminish 'highlight-indent-guides-mode
   :hook ((prog-mode text-mode conf-mode) . highlight-indent-guides-mode)
   :hook (after-init . highlight-indent-guides-auto-set-faces)
   :init (setq highlight-indent-guides-method 'character))
 
 (use-package auto-highlight-symbol
-  :straight t
-  :diminish t
+  :diminish 'auto-highlight-symbol-mode
   :commands (ahs-highlight-p)
   :hook (prog-mode . auto-highlight-symbol-mode)
   :config
@@ -1576,12 +1490,10 @@
         ahs-idle-interval 3.75))
 
 (use-package highlight-numbers
-  :straight t
   :hook (prog-mode . highlight-numbers-mode))
 
 (use-package emacs-lisp-mode
   :straight '(:type built-in)
-  :defer t
   :hook (emacs-lisp-mode . (lambda ()
                              (interactive)
                              (electric-pair-mode -1)
@@ -1593,9 +1505,8 @@
     (semantic-default-emacs-lisp-setup)))
 
 (use-package company-c-headers
-  :init
-  (add-to-list 'company-backends 'company-c-headers)
   :config
+  (add-to-list 'company-backends 'company-c-headers)
   (add-to-list 'company-c-headers-path-system "/usr/include/c++/v1/"))
 
 (use-package function-args
@@ -1607,7 +1518,7 @@
 
 ;; yet another cool tags solution
 (use-package rtags
-  :defer t
+  :demand nil
   :config
   (progn
     (unless (rtags-executable-find "rc") (error "Binary rc is not installed!"))
@@ -1622,7 +1533,7 @@
     (add-hook 'kill-emacs-hook 'rtags-quit-rdm)
     ))
 (use-package company-rtags
-  :defer t
+  :demand nil
   :config
   (progn
     (setq rtags-autostart-diagnostics t)
@@ -1632,7 +1543,7 @@
     ))
 
 (use-package flycheck-rtags
-  :defer t
+  :demand nil
   :config
   (progn
     ;; ensure that we use only rtags checking
@@ -1668,7 +1579,6 @@
 
 (use-package gdb
   :straight (:type built-in)
-  :defer t
   :init
   (setq gdb-many-windows t
         gdb-show-main t))
@@ -1676,37 +1586,31 @@
 ;; cool but outdated
 ;; relies on rtags
 (use-package cmake-ide
-  :defer t
+  :demand nil
   :config
   (setq cmake-ide-flags-c++ (append '("-std=c++20")))
   (cmake-ide-setup))
 
 (use-package highlight-quoted
-  :straight t
   :hook (emacs-lisp-mode . highlight-quoted-mode))
 
 (use-package elisp-def
-  :straight t
   :diminish
   :hook (emacs-lisp-mode . elisp-def-mode))
 
 (use-package macrostep
-  :straight t
   :mode (("\\*.el\\'" . emacs-lisp-mode)
          ("Cask\\'" . emacs-lisp-mode)))
 
 (use-package elisp-slime-nav
-  :straight t
   :diminish
   :hook (emacs-lisp-mode  . elisp-slime-nav-mode))
 
 (use-package eval-sexp-fu
-  :straight t
   :hook (emacs-lisp-mode . eval-sexp-fu-flash-mode))
 
 (use-package ielm
   :straight '(:type built-in)
-  :defer t
   :hook (ielm-mode . smartparens-strict-mode)
   :hook (ielm-mode . rainbow-delimiters-mode)
   :hook (ielm-mode . eldoc-mode)
@@ -1714,7 +1618,6 @@
   :hook (ielm-mode . highlight-numbers-mode))
 
 (use-package tramp
-  :defer t
   :config
   (setq vc-handled-backends '(Git)
         file-name-inhibit-locks t
@@ -1732,6 +1635,7 @@
 (use-package dired
   :straight '(:type built-in)
   :hook (dired-mode . dired-hide-details-mode)
+  :bind ("C-x C-k" . 'dired-do-delete)
   :config
   (setq dired-dwim-target t
         dired-hide-details-hide-symlink-targets nil
@@ -1742,7 +1646,6 @@
 
 (use-package dired-aux
   :straight '(:type built-in)
-  :defer t
   :config
   (require 'dired-async)
   (setq dired-create-destination-dirs 'ask
@@ -1768,7 +1671,6 @@
   )
 
 (use-package dired-hide-dotfiles
-  :straight t
   :hook (dired-mode . dired-hide-dotfiles-mode))
 
 (use-package dired-gitignore
@@ -1776,23 +1678,18 @@
   :hook (dired-mode . dired-gitignore-mode))
 
 (use-package fd-dired
-  :straight t
   :init
   (global-set-key [remap find-dired] #'fd-dired))
 
 (use-package diredfl
-  :straight t
   :hook (dired-mode . diredfl-mode))
 
 (use-package dired-git-info
-  :straight t
   :hook (dired-mode . (lambda ()
                         (dired-git-info-mode t))))
 
-(define-key dired-mode-map (kbd "C-x C-k") 'dired-do-delete)
-
 (use-package all-the-icons-dired
-  :straight t
+  :demand
   :diminish t
   :if (display-graphic-p)
   :hook (dired-mode . (lambda () (interactive)
@@ -1802,8 +1699,7 @@
   (all-the-icons-scale-factor 1.0))
 
 (use-package magit
-  :straight t
-  :defer t
+  :demand
   :hook (magit-post-refresh  . diff-hl-magit-post-refresh)
   :init
   (setq magit-log-arguments '("--graph" "--decorate" "--color"))
@@ -1819,26 +1715,18 @@
   (setq magit-no-confirm '(stage-all-changes unstage-all-changes)))
 
 (use-package git-modes
-  :straight t
   :after magit)
 
 (use-package ghub
-  :straight t
-  :defer t
   :after magit)
 
 (use-package forge
-  :straight t
-  :defer t
   :after magit)
 
 (use-package orgit
-  :straight t
   :after org)
 
 (use-package orgit-forge
-  :straight t
-  :defer t
   :after forge)
 
 ;; the future
@@ -1881,7 +1769,7 @@ Return a list of languages seen along the way."
 (auto-configure-treesitter)
 
 (use-package treesit-auto
-  :straight t
+  :demand
   :config
   (global-treesit-auto-mode))
 
@@ -1921,13 +1809,8 @@ Return a list of languages seen along the way."
 (straight-use-package 'tree-sitter-indent)
 
 (use-package tree-sitter
-  :straight t
-  :hook (python-mode . (lambda ()
-                         (require 'tree-sitter)
-                         (require 'tree-sitter-langs)
-                         (require 'tree-sitter-hl)
-                         (tree-sitter-indent-mode t)))
   :hook (tree-sitter-after-on . tree-sitter-hl-mode)
+  :hook (tree-sitter-after-on . tree-sitter-indent-mode)
   :config
   (setq tree-sitter-debug-jump-buttons t
         tree-sitter-debug-highlight-jump-region t)
@@ -1979,7 +1862,6 @@ delete."
   (eshell-emit-prompt))
 
 (use-package esh-mode
-  :defer t
   :straight '(:type built-in)
   :bind (:map eshell-mode-map
               ("C-a" .  #'eshell-bol)
@@ -1994,6 +1876,7 @@ delete."
   (add-to-list 'eshell-modules-list 'eshell-smart))
 
 (use-package eshell
+  :commands eshell
   :straight '(:type built-in)
   :hook (eshell-mode . (lambda ()
                          (interactive)
@@ -2054,21 +1937,18 @@ delete."
   :after eshell
   :config (setup-esh-help-eldoc))
 
-(use-package shrink-path
-  :straight t
-  :defer t)
+(straight-use-package 'shrink-path)
 
 (use-package eshell-did-you-mean
-  :after eshell-mode
+  :after esh-mode
   :config (eshell-did-you-mean-setup)
   (setq eshell-last-command-name "catt")
   (eshell-did-you-mean-output-filter "catt: command not found"))
 
 (use-package eshell-syntax-highlighting
-  :hook (eshell-mode . eshell-syntax-highlighting-mode))
+  :hook (esh-mode . eshell-syntax-highlighting-mode))
 
-(use-package shell-pop
-  :defer t)
+(straight-use-package 'shell-pop)
 
 ;;; Some hacks to make ~company-mode~ work.
 
@@ -2095,7 +1975,6 @@ delete."
           #'eshell-switch-company-frontend)
 
 (use-package lsp-pyright
-  :straight t
   :config
   (setq lsp-pyright-disable-language-service nil
         lsp-pyright-disable-organize-imports nil
@@ -2104,7 +1983,6 @@ delete."
 
 ;;; a major mode
 (use-package python-mode
-  :straight t
   :mode "\\.py\\'"
   :interpreter "ipython"
   :hook (python-mode . lsp-deferred)
@@ -2124,7 +2002,6 @@ delete."
 
 ;;; an actual mode which uses it all
 (use-package elpy
-  :straight t
   :mode "\\.py\\'"
   :bind
   (:map elpy-mode-map
@@ -2143,18 +2020,14 @@ delete."
   (setq elpy-modules (delq 'elpy-module-flymake elpy-modules)))
 
 (use-package blacken
-  :straight t
   :hook (python-mode . blacken-mode)
   :config
   (setq blacken-line-length '72))
 
 (use-package python-docstring
-  :straight t
   :hook (python-mode . python-docstring-mode))
 
 (use-package ein
-  :straight t
-  :defer t
   :load-path "lisp"
   :config
   (require 'ob-ein)
@@ -2163,13 +2036,10 @@ delete."
    '((ein . t))))
 
 ;;; defer
-(use-package rust-mode
-  :straight t
-  :defer t)
+(use-package rust-mode)
 
 ;;; the actual fancy mode
 (use-package rustic
-  :straight t
   :mode "\\.rs\\'")
 
 (add-hook 'lisp-mode-hook (lambda ()
