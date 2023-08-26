@@ -366,17 +366,33 @@
 (global-set-key (kbd "C-x C-n") 'next-buffer)      ; Overrides `set-goal-column'
 
 (use-package gcmh
-  :straight t
   :demand t
   :diminish 'gcmh-mode
   :config
   (gcmh-mode t))
 
 (use-package whitespace-cleanup-mode
-  :straight t
   :hook (after-init . global-whitespace-cleanup-mode)
   :config
   (diminish 'whitespace-cleanup-mode))
+
+;; a nice hack
+(use-package grep
+  :straight '(:type built-in)
+  :init
+  (setq-default grep-highlight-matches t
+                grep-scroll-output t)
+  :config
+  (when (executable-find "rg")
+    (setq grep-program "rg")
+    (grep-apply-setting
+     'grep-find-command
+     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
+    (add-to-list 'grep-find-ignored-directories "target")
+    (add-to-list 'grep-find-ignored-directories "node_modules")
+    (setq wgrep-enable-key "w")
+    (global-set-key (kbd "C-x C-g") 'grep-find)))
+
 
 ;; (defun colorize-compilation-buffer ()
 ;;   "Enable colors in the *compilation* buffer."
@@ -403,7 +419,6 @@
   (add-hook 'compilation-filter-hook 'colourise-compilation-buffer))
 
 (use-package auto-compile
-  :straight t
   :demand t
   :config (auto-compile-on-load-mode))
 
@@ -421,13 +436,6 @@
 
 (global-set-key (kbd "C-c f") #'ffap)
 
-(use-package eldoc
-  :straight t
-  :diminish
-  :config
-  (setq eldoc-echo-area-use-multiline-p nil)
-  (global-eldoc-mode t))
-
 (use-package emacs
   :custom
   (auto-save-default t)
@@ -440,13 +448,12 @@
   (auto-save-visited-mode t))
 
 (use-package super-save
-  :straight t
   :diminish
   :config
   (super-save-mode +1))
 
 (use-package undo-tree
-  :straight t
+  :demand t
   :diminish
   :init
   (setq undo-tree-history-directory-alist `(("." . ,(concat user-emacs-directory "undo-tree-hist/"))))
@@ -457,17 +464,15 @@
         undo-tree-enable-undo-in-region t)
   (global-undo-tree-mode t))
 
-(use-package fontaine
-  :straight t
-  :defer t)
+(straight-use-package 'fontaine)
 
 (use-package unicode-fonts
-  :straight t
+  :demand t
   :config
   (unicode-fonts-setup))
 
 (use-package ligature
-  :straight t
+  :demand t
   :diminish
   :config
   (ligature-set-ligatures 't '("www"))
@@ -475,38 +480,30 @@
   (global-ligature-mode 't))
 
 (use-package all-the-icons
-  :straight t
   :demand t)
 
-(use-package all-the-icons-completion
-  :after all-the-icons
-  :init
-  (all-the-icons-completion-mode))
-
 (use-package emojify
-  :straight t
   :hook (after-init . global-emojify-mode)
   :config
   (setq emojify-emoji-styles 'unicode)
   (emojify-set-emoji-styles emojify-emoji-styles))
 
 (use-package mixed-pitch
-  :straight t
   :hook
   ((text-mode . mixed-pitch-mode)
    (help-mode . mixed-pitch-mode)
+   (Man-mode . mixed-pitch-mode)
+   (Info-mode . mixed-pitch-mode)
    (org-mode . mixed-pitch-mode)
    (latex-mode . mixed-pitch-mode)
    (markdown-mode . mixed-pitch-mode)
    (gfm-mode . mixed-pitch-mode)
-   (info-mode . mixed-pitch-mode)
    (nov-mode . mixed-pitch-mode))
   :hook (mixed-pitch-mode . (lambda ()
                               (solaire-mode t)
                               (variable-pitch-mode t))))
 
 (use-package visual-fill-column
-  :straight t
   :hook (visual-line-mode . visual-fill-column-mode))
 
 (defun display-ansi-colors ()
@@ -536,6 +533,9 @@
   (add-to-list 'flyspell-prog-text-faces 'nxml-text-face)
   (flyspell-mode t))
 
+(use-package flyspell-correct-ivy
+  :after ivy)
+
 (use-package spell-fu
   :config (global-spell-fu-mode t))
 
@@ -550,7 +550,9 @@
   (setq sgml-transformation-function 'upcase)
   (setq sgml-set-face t)
   (setq sgml-auto-activate-dtd t)
-  (setq sgml-indent-data t))
+  (setq sgml-indent-data t)
+  (defadvice sgml-delete-tag (after reindent activate)
+    (indent-region (point-min) (point-max))))
 
 (setq sgml-markup-faces '(
     (start-tag . font-lock-keyword-face)
@@ -781,8 +783,17 @@
   :config
   (setq org-html-coding-system 'utf-8-unix))
 
+(use-package ox-gfm
+  :commands (org-gfm-export-as-markdown org-gfm-export-to-markdown)
+  :after ox)
+
 (use-package ox-hugo
   :after ox)
+
+(straight-use-package 'transient)
+
+(use-package org-pandoc-import
+  :straight '(org-pandoc-import :type git :host github :repo "tecosaur/org-pandoc-import"))
 
 (use-package guru-mode
   :demand t
@@ -886,10 +897,6 @@
 
 (use-package grip-mode
   :hook (markdown-mode . grip-mode))
-
-(use-package ox-gfm
-  :commands (org-gfm-export-as-markdown org-gfm-export-to-markdown)
-  :after org)
 
 (use-package vterm
   :hook (vterm-mode . yas-minor-mode)
@@ -996,20 +1003,6 @@
   (define-key grep-mode-map (kbd "w") 'wgrep-change-to-wgrep-mode)
   (setq wgrep-auto-save-buffer t))
 
-;; a nice hack
-(use-package grep
-  :straight '(:type built-in)
-  :init
-  (setq-default grep-highlight-matches t
-                grep-scroll-output t)
-  :config
-  (when (executable-find "rg")
-    (setq grep-program "rg")
-    (grep-apply-setting
-     'grep-find-command
-     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
-    (global-set-key (kbd "C-x C-g") 'grep-find)))
-
 (setq completions-format 'one-column) ;; like ido
 (setq completion-styles '(flex basic partial-completion emacs22))
 
@@ -1017,9 +1010,10 @@
   (setq completion-auto-help 'visible
         completion-auto-select 'second-tab
         completion-show-help t
-        completions-sort t
+        completions-sort nil ;; tricky crap
         completions-header-format nil))
 
+;; It is OK, we can use both toolchains together
 (use-package orderless
   :config
   (add-to-list 'completion-styles 'orderless)
@@ -1028,11 +1022,178 @@
   (completion-category-overrides '((file (styles basic partial-completion)))))
 
 (use-package projectile
+  :demand
   :hook (after-init . projectile-mode)
   :init
   (setq-default projectile-generic-command "rg --files --hidden -0")
   :config
   (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
+
+;; a rip-off of Doom
+(defmacro defadvice! (symbol arglist &optional docstring &rest body)
+  "Define an advice called SYMBOL and add it to PLACES.
+
+ARGLIST is as in `defun'. WHERE is a keyword as passed to `advice-add', and
+PLACE is the function to which to add the advice, like in `advice-add'.
+DOCSTRING and BODY are as in `defun'.
+
+\(fn SYMBOL ARGLIST &optional DOCSTRING &rest [WHERE PLACES...] BODY\)"
+  (declare (doc-string 3) (indent defun))
+  (unless (stringp docstring)
+    (push docstring body)
+    (setq docstring nil))
+  (let (where-alist)
+    (while (keywordp (car body))
+      (push `(cons ,(pop body) (ensure-list ,(pop body)))
+            where-alist))
+    `(progn
+       (defun ,symbol ,arglist ,docstring ,@body)
+       (dolist (targets (list ,@(nreverse where-alist)))
+         (dolist (target (cdr targets))
+           (advice-add target (car targets) #',symbol))))))
+
+(defmacro pushnew! (place &rest values)
+  "Push VALUES sequentially into PLACE, if they aren't already present.
+This is a variadic `cl-pushnew'."
+  (let ((var (make-symbol "result")))
+    `(dolist (,var (list ,@values) (with-no-warnings ,place))
+       (cl-pushnew ,var ,place :test #'equal))))
+
+(defvar +vertico-company-completion-styles '(basic partial-completion orderless)
+  "Completion styles for company to use.")
+
+(defvar +vertico/find-file-in--history nil)
+;;;###autoload
+(defun +vertico/find-file-in (&optional dir initial)
+  "Jump to file under DIR (recursive).
+If INITIAL is non-nil, use as initial input."
+  (interactive)
+  (require 'consult)
+  (let* ((default-directory (or dir default-directory))
+         (prompt-dir (consult--directory-prompt "Find" default-directory))
+         (cmd (split-string-and-unquote +vertico-consult-fd-args " ")))
+    (find-file
+     (consult--read
+      (split-string (cdr (apply #'doom-call-process cmd)) "\n" t)
+      :prompt default-directory
+      :sort nil
+      :initial (if initial (shell-quote-argument initial))
+      :add-history (thing-at-point 'filename)
+      :category 'file
+      :history '(:input +vertico/find-file-in--history)))))
+
+;; this extends built-in default completion system
+(use-package vertico
+  :demand
+  :straight (vertico :files (:defaults "extensions/*")
+                     :includes (vertico-indexed
+                                vertico-flat
+                                vertico-grid
+                                ;; vertico-mouse
+                                ;; vertico-quick
+                                vertico-buffer
+                                vertico-repeat
+                                vertico-reverse
+                                vertico-directory
+                                vertico-multiform
+                                vertico-unobtrusive
+                                ))
+  :hook (after-init . vertico-mode)
+  :hook
+  ((minibuffer-setup . vertico-repeat-save) ; Make sure vertico state is saved for `vertico-repeat'
+   (rfn-eshadow-update-overlay . vertico-directory-tidy) ; Clean up file path when typing
+   )
+  :init
+  (defadvice! +vertico-crm-indicator-a (args)
+    :filter-args #'completing-read-multiple
+    (cons (format "[CRM%s] %s"
+                  (replace-regexp-in-string
+                   "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" ""
+                   crm-separator)
+                  (car args))
+          (cdr args)))
+  :config
+  (setq vertico-resize nil
+        vertico-count 17
+        vertico-cycle t)
+  (setq-default completion-in-region-function
+                (lambda (&rest args)
+                  (apply (if vertico-mode
+                             #'consult-completion-in-region
+                           #'completion--in-region)
+                         args)))
+  (advice-add #'tmm-add-prompt :after #'minibuffer-hide-completions)
+   (defadvice! +vertico--suppress-completion-help-a (fn &rest args)
+    :around #'ffap-menu-ask
+    (letf! ((#'minibuffer-completion-help #'ignore))
+      (apply fn args))))
+
+;; this extends default completion lists
+(use-package marginalia
+  :demand
+  :after vertico
+  :hook (after-init . marginalia-mode)
+  :init
+  (setq marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :config
+  (advice-add #'marginalia--project-root :override #'projectile-project-root)
+    (pushnew! marginalia-command-categories
+            '(flycheck-error-list-set-filter . builtin)
+            '(projectile-find-file . project-file)
+            '(projectile-recentf . project-file)
+            '(projectile-switch-to-buffer . buffer)
+            '(projectile-switch-project . project-file)))
+
+(use-package consult
+  :bind (
+    ([remap bookmark-jump] .               #'consult-bookmark)
+    ([remap goto-line] .                   #'consult-goto-line)
+    ([remap imenu] .                       #'consult-imenu)
+    ([remap Info-search] .                 #'consult-info)
+    ([remap locate] .                      #'consult-locate)
+    ([remap load-theme] .                  #'consult-theme)
+    ([remap man] .                         #'consult-man)
+    ([remap recentf-open-files] .          #'consult-recent-file)
+    ([remap switch-to-buffer] .            #'consult-buffer)
+    ([remap switch-to-buffer-other-window] . #'consult-buffer-other-window)
+    ([remap switch-to-buffer-other-frame] . #'consult-buffer-other-frame)
+    ([remap yank-pop] .                    #'consult-yank-pop))
+  :config
+  (setq consult-project-root-function #'projectile-project-root
+        consult-narrow-key "<"
+        consult-line-numbers-widen t
+        consult-async-min-input 2
+        consult-async-refresh-delay  0.15
+        consult-async-input-throttle 0.2
+        consult-async-input-debounce 0.1)
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref)
+  (consult-customize
+     consult-ripgrep consult-git-grep consult-grep))
+
+;; C-x C-f
+(use-package consult-dir
+  :bind (([remap list-directory] . consult-dir)
+         :map vertico-map
+         ("C-x C-d" . consult-dir)
+         ("C-x C-j" . consult-dir-jump-file))
+  :config
+  (add-to-list 'consult-dir-sources 'consult-dir--source-tramp-ssh t)
+  (add-to-list 'consult-dir-sources 'consult-dir--source-tramp-local t))
+
+(use-package consult-flycheck
+  :after (consult flycheck))
+
+(use-package consult-lsp
+  :after (consult lsp)
+    :init
+  (map! :map lsp-mode-map [remap xref-find-apropos] #'consult-lsp-symbols))
+
+(use-package all-the-icons-completion
+  :after (marginalia all-the-icons)
+  :hook (marginalia-mode . #'all-the-icons-completion-marginalia-setup)
+  :init
+  (all-the-icons-completion-mode))
 
 (use-package ibuffer-projectile
   :after projectile)
@@ -1040,21 +1201,18 @@
 ;; will be loaded by ivy
 (straight-use-package 'flx)
 
+;; loat on-demand
 (use-package ivy
   :diminish
-  :hook (after-init . ivy-mode) ;; another kludge
+  ;; :hook (after-init . ivy-mode) ;; another kludge
   :bind
-  (([remap switch-to-buffer] . #'+ivy/switch-buffer)
-   ([remap switch-to-buffer-other-window] . #'+ivy/switch-buffer-other-window)
    (:map ivy-minibuffer-map
          ([remap doom/delete-backward-word] . #'ivy-backward-kill-word)
-         ("C-c C-e" . #'+ivy/woccur)
-         ("C-o" . #'ivy-dispatching-done)
-         )
-   )
+         ("C-o" . #'ivy-dispatching-done))
   :init
   (let ((standard-search-fn
-         #'+ivy-prescient-non-fuzzy)
+         ;; #'+ivy-prescient-non-fuzzy)
+         #'+ivy--regex-plus)
         (alt-search-fn
          #'ivy--regex-fuzzy))
     (setq ivy-re-builders-alist
@@ -1082,13 +1240,13 @@
   (ivy-set-occur 'ivy-switch-buffer 'ivy-switch-buffer-occur)
   (ivy-set-occur 'swiper 'swiper-occur)
   (ivy-set-occur 'swiper-isearch 'swiper-occur)
-  (ivy-set-occur 'swiper-multi 'counsel-ag-occur)
-  (ivy-mode t))
+  (ivy-set-occur 'swiper-multi 'counsel-ag-occur))
+;;  (ivy-mode t))
 
 ;; this is such a cool embedded DLS
 (use-package counsel
   :diminish
-  :after ivy
+;;  :after ivy
   :bind
   (([remap apropos]                .  #'counsel-apropos)
    ([remap bookmark-jump]          .  #'counsel-bookmark)
@@ -1098,8 +1256,8 @@
    ([remap describe-function]      .  #'counsel-describe-function)
    ([remap describe-variable]      .  #'counsel-describe-variable)
    ([remap describe-symbol]        .  #'counsel-describe-symbol)
-   ([remap execute-extended-command] .  #'counsel-M-x)
-   ([remap find-file]              .  #'counsel-find-file)
+;;   ([remap execute-extended-command] .  #'counsel-M-x)
+;;   ([remap find-file]              .  #'counsel-find-file)
    ([remap find-library]           .  #'counsel-find-library)
    ([remap imenu]                  .  #'counsel-imenu)
    ([remap info-lookup-symbol]     .  #'counsel-info-lookup-symbol)
@@ -1133,11 +1291,10 @@
   (add-to-list 'savehist-additional-variables 'counsel-compile-history)
   (setq counsel-find-file-ignore-regexp
         "\\(?:^[#.]\\)\\|\\(?:[#~]$\\)\\|\\(?:^Icon?\\)")
-  (ivy-add-actions 'counsel-file-jump (plist-get ivy--actions-list 'counsel-find-file))
-  (counsel-mode t))
+  (ivy-add-actions 'counsel-file-jump (plist-get ivy--actions-list 'counsel-find-file)))
+;;  (counsel-mode t))
 
 (use-package ivy-rich
-  :demand
   :after ivy
   :init
   (setq ivy-rich-path-style 'abbrev
@@ -1160,7 +1317,6 @@
   :init (all-the-icons-ivy-rich-mode 1))
 
 (use-package prescient
-  :demand t
   :config (prescient-persist-mode +1))
 
 ;; lots of Doom Emacs hacks. a nasty bug with :init instead of :config
@@ -1256,10 +1412,14 @@
 ;;         `((min-width . 90)
 ;;           (min-height . ,ivy-height))))
 
+(use-package ivy-pass
+  :after ivy)
+
 (use-package ivy-avy
   :after ivy)
 
 (use-package ivy-xref
+  :after ivy
   :init
   (setq xref-prompt-for-identifier '(not xref-find-definitions
                                          xref-find-definitions-other-window
@@ -1318,16 +1478,27 @@
 
 (add-hook 'minibuffer-setup-hook 'conditionally-enable-smartparens-mode)
 
+(use-package eldoc
+  :diminish
+  :after company
+  :hook (after-init . global-eldoc-mode)
+  :hook (prog-mode . eldoc-mode)
+  :config
+  (eldoc-add-command 'company-complete-selection
+                       'company-complete-common
+                       'company-capf
+                       'company-abort)
+  (setq eldoc-echo-area-use-multiline-p nil))
+
 (use-package company
   :demand
   :commands (company-complete-common
              company-complete-common-or-cycle
              company-manual-begin
              company-grab-line)
+  :hook (after-init . global-company-mode)
   :hook (prog-mode . company-mode)
   :bind ("M-/" . #'company-complete-common-or-cycle)
-  :init
-  (global-company-mode)
   :config
   (setq company-dabbrev-other-buffers t
         company-dabbrev-code-other-buffers t)
@@ -1336,6 +1507,16 @@
         company-tooltip-limit 14
         company-tooltip-align-annotations t
         company-require-match 'never)
+  (setq company-global-modes
+        '(not message-mode
+              Man-mode
+              help-mode
+              Info-mode
+              gud-mode
+              vterm-mode))
+  (setq company-frontends
+        '(company-pseudo-tooltip-frontend  ; always show        candidates in overlay tooltip
+          company-echo-metadata-frontend))  ; show selected )
   (setq company-backends
         '((company-keywords
            company-capf
@@ -1346,10 +1527,12 @@
           (company-abbrev company-dabbrev company-dabbrev-code)
           )))
 
+;; prescient will be loaded on demand
 (use-package company-prescient
   :hook (company-mode . company-prescient-mode)
   :hook (company-prescient-mode . prescient-persist-mode))
 
+;; good for ~company~ and ~which-key~. shitty for ~ivy~
 (use-package company-posframe
   :diminish
   :hook (company-mode . company-posframe-mode)
@@ -1393,6 +1576,9 @@
   :config (global-flycheck-mode t))
 
 (use-package flycheck-pos-tip
+  :init
+  '(custom-set-variables
+    '(flycheck-display-errors-function #'flycheck-pos-tip-error-messages))
   :hook (flycheck-mode . flycheck-pos-tip-mode))
 
 (setq flycheck-check-syntax-automatically '(save
@@ -1471,19 +1657,26 @@
         lsp-ui-doc-delay 0.75           ; 0.2 (default) is too naggy
         lsp-ui-doc-position 'at-point
         lsp-ui-sideline-ignore-duplicate t)
+  (setq lsp-signature-auto-activate nil)
+  (setq lsp-lens-enable t)
+  (setq lsp-enable-symbol-highlighting t)
+  (setq lsp-ui-doc-enable t)
   (setq lsp-ui-doc-show-with-cursor t)
   (setq lsp-ui-doc-show-with-mouse nil)
   (setq lsp-ui-peek-always-show t)
   (setq lsp-ui-peek-fontify 'always)
-  (setq lsp-modeline-code-actions-enable nil)
-  (setq lsp-ui-sideline-enable nil)
-  (setq lsp-ui-sideline-show-hover t)
-  (setq lsp-enable-symbol-highlighting t)
-  (setq lsp-ui-doc-enable t)
   (setq lsp-eldoc-enable-hover t)
+  (setq lsp-modeline-code-actions-enable nil)
+  ;; (setq lsp-ui-sideline-enable nil)
+  (setq lsp-ui-sideline-show-hover t)
+  (setq lsp-ui-sideline-show-diagnostics t)
+  (setq lsp-ui-sideline-show-code-actions nil)
+  (setq lsp-completion-show-detail t)
+  (setq lsp-completion-show-kind t)
   (setq lsp-ui-doc-show-with-cursor t))
 
 (use-package lsp-ivy
+  :after lsp
   :commands lsp-ivy-workspace-symbol lsp-ivy-global-workspace-symbol)
 
 (add-hook 'prog-mode-hook
@@ -1805,6 +1998,12 @@
   :init
   (setq magit-log-arguments '("--graph" "--decorate" "--color"))
   (setq git-commit-fill-column 72)
+  (setq magit-section-initial-visibility-alist
+      '((untracked . show)
+        (unstaged . show)
+        (unpushed . show)
+        (unpulled . show)
+        (stashes . show)))
   :config
   (setq magit-completing-read-function 'ivy-completing-read)
   (setq transient-default-level 5)
