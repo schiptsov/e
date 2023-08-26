@@ -162,6 +162,7 @@
   :config
   (setq-default indent-tabs-mode nil)
   (setq-default tab-always-indent 'complete)
+  (setq-default completion-cycle-threshold 3)
 
   (add-hook 'sh-mode-hook (lambda () (setq indent-tabs-mode t)))
 
@@ -1016,10 +1017,33 @@
 ;; It is OK, we can use both toolchains together
 (use-package orderless
   :config
-  (add-to-list 'completion-styles 'orderless)
+  (add-to-list 'completion-styles 'orderless) ;; this
   (setq orderless-component-separator "[ &]")
   :custom
   (completion-category-overrides '((file (styles basic partial-completion)))))
+
+;; extends built-in completions, a-la vertico
+(use-package corfu
+  :init
+  (global-corfu-mode)
+  :config
+  (setq corfu-auto t
+        corfu-quit-no-match t))
+
+(add-hook 'eshell-mode-hook
+          (lambda ()
+            (setq-local corfu-auto nil)
+            (corfu-mode)))
+
+(defun corfu-send-shell (&rest _)
+  "Send completion candidate when inside comint/eshell."
+  (cond
+   ((and (derived-mode-p 'eshell-mode) (fboundp 'eshell-send-input))
+    (eshell-send-input))
+   ((and (derived-mode-p 'comint-mode)  (fboundp 'comint-send-input))
+    (comint-send-input))))
+
+(advice-add #'corfu-insert :after #'corfu-send-shell)
 
 (use-package projectile
   :demand
@@ -1215,7 +1239,7 @@ If INITIAL is non-nil, use as initial input."
   :init
   (let ((standard-search-fn
          ;; #'+ivy-prescient-non-fuzzy)
-         #'+ivy--regex-plus)
+         #'ivy--regex-plus)
         (alt-search-fn
          #'ivy--regex-fuzzy))
     (setq ivy-re-builders-alist
