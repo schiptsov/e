@@ -1025,6 +1025,9 @@
   :demand
   :hook (after-init . projectile-mode)
   :init
+  (setq projectile-require-project-root t)
+  (setq projectile-indexing-method 'alien)
+  (setq projectile-completion-system 'ivy)
   (setq-default projectile-generic-command "rg --files --hidden -0")
   :config
   (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
@@ -1540,6 +1543,7 @@ If INITIAL is non-nil, use as initial input."
   (setq company-tooltip-minimum-width 40))
 
 (use-package company-quickhelp
+  :after company
   :custom
   (company-quickhelp-delay 3)
   :hook (company-mode . company-quickhelp-mode))
