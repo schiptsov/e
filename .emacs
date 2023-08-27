@@ -1,12 +1,38 @@
 ;;; -*- mode: emacs-lisp; lexical-binding: t; coding: utf-8; -*-
 
-;; use hooks and implicit defers,
-;; not afters and configs
-;; some packages work only as modes in configs
+;;; This file sets up a lot of outdated and obsolete packages
+;;; so it is already bloated.
+;;;
+;;; The easiest thing to do is to comment out whole blocks of code
+;;;
+;;; In the modern world 'lsp-mode and 'lsp-ui are enough
+;;; And they use
+;;; - completions (built-in)
+;;; - corfu, vertico, marginalia, orderless (enchancements)
+;;; - ivy
+;;; - eldoc
+;;; - yasnippet
+;;; - company
+;;; - flycheck
+;;; - flymake (optional)
+;;;
+;;; so these have to be set up properly (as /global modes/)
+;;;
+;;; As a quick hack, one just have to tell 'straight to
+;;;
+;;; (straight-use-package lsp-ui)
+;;;
+;;; and it will install all the minimal required dependencies
+;;; so one has to customize them later.
+;;;
+;;; use hooks and implicit defers,
+;;; not afters and configs
+;;; some packages work only as modes in configs
 
 (setq-default load-prefer-newer t)
 
 ;; a temporary kludge
+;; TODO: remove this line
 (setq-default user-emacs-directory "/home/lngnmn2/.emacs1.d/")
 
 (setq byte-compile-warnings t)
@@ -1856,8 +1882,8 @@ If INITIAL is non-nil, use as initial input."
 
 ;; comint, etc.
 (use-package slime
-  :hook (lisp-mode . slime-mode)
-  ;; :hook (lisp-mode-local-vars . slime-editing-mode)
+  ;; :hook (lisp-mode . slime-mode) ;; slows down emacs-lisp
+  :hook (lisp-mode-local-vars . slime-editing-mode)
   :hook (lisp-mode . (lambda ()
                              (interactive)
                              (electric-pair-mode -1)
