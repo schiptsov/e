@@ -398,10 +398,51 @@
   :config
   (gcmh-mode t))
 
+(use-package pinentry
+  :config (pinentry-start))
+
+(use-package epg
+  :straight '(:type built-in)
+  :config
+  (setq epg-pinentry-mode 'loopback)
+  (setq epg-gpg-program "gpg"))
+
+(use-package epa-file
+  :straight '(:type built-in)
+  :custom
+  (epa-file-select-keys 'silent)
+  :config
+  (setq epa-pinentry-mode 'loopback)
+  (setq epa-file-cache-passphrase-for-symmetric-encryption t)
+  (setq epa-file-select-keys nil)
+  (epa-file-enable))
+
+(use-package auth-source
+  :straight (:type built-in)
+  :config
+  (setq auth-sources '("~/.authinfo.gpg")
+        auth-source-cache-expiry nil))
+
+(use-package pass
+  :config
+  (setf epa-pinentry-mode 'loopback)
+  (auth-source-pass-enable))
+
 (use-package whitespace-cleanup-mode
   :hook (after-init . global-whitespace-cleanup-mode)
   :config
   (diminish 'whitespace-cleanup-mode))
+
+(straight-use-package 'crypt++)
+
+(use-package org-crypt
+  :straight (:type built-in)
+  :after org
+  :config
+  (org-crypt-use-before-save-magic)
+  (setq org-tags-exclude-from-inheritance (quote ("crypt")))
+  :custom
+  (org-crypt-key "lngnmn2@yahoo.com"))
 
 ;; a nice hack
 (use-package grep
@@ -2627,9 +2668,9 @@ delete."
         python-shell-prompt-detect-failure-warning nil))
 
 ;;; an actual mode which uses it all
-(use-package elpy-mode
+(use-package elpy
   :demand
-  :mode "\\.py\\'"
+  :mode ("\\.py\\'" . elpy-mode)
   :bind
   (:map elpy-mode-map
         ("C-M-n" . elpy-nav-forward-block)
