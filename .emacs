@@ -1605,14 +1605,14 @@ If INITIAL is non-nil, use as initial input."
   :config (global-flycheck-mode t))
 
 (use-package flycheck-pos-tip
+  :hook (flycheck-mode . flycheck-pos-tip-mode)
   :init
   '(custom-set-variables
     '(flycheck-display-errors-function #'flycheck-pos-tip-error-messages))
-  :hook (flycheck-mode . flycheck-pos-tip-mode))
 
-(setq flycheck-check-syntax-automatically '(save
+  (setq flycheck-check-syntax-automatically '(save
                                             idle-change
-                                            mode-enabled))
+                                            mode-enabled)))
 
 (eval-after-load 'flycheck
   '(custom-set-variables
@@ -1824,6 +1824,8 @@ If INITIAL is non-nil, use as initial input."
 (use-package highlight-numbers
   :hook (prog-mode . highlight-numbers-mode))
 
+(autoload 'octave-mode "octave-mod" nil t)
+
 (use-package emacs-lisp-mode
   :straight '(:type built-in)
   :hook (emacs-lisp-mode . (lambda ()
@@ -1835,6 +1837,171 @@ If INITIAL is non-nil, use as initial input."
   :config
   (with-eval-after-load 'semantic
     (semantic-default-emacs-lisp-setup)))
+
+(use-package xscheme
+  :hook (emacs-lisp-mode . (lambda ()
+                             (interactive)
+                             (electric-pair-mode -1)
+                             (electric-spacing-mode -1)))
+  :config
+  (setq scheme-program-name "mit-scheme")
+  (setq inferior-scheme-program "mit-scheme"))
+
+(straight-use-package 'hippie-expand-slime)
+
+;; comint, etc.
+(use-package slime
+  :hook (lisp-mode . slime-mode)
+  :hook (lisp-mode . (lambda ()
+                             (interactive)
+                             (electric-pair-mode -1)
+                             (electric-spacing-mode -1)))
+  :hook (inferior-lisp-mode . inferior-slime-mode)
+  :init
+  (setq inferior-lisp-program "sbcl")
+  (setq slime-lisp-implementations
+          '((sbcl ("/usr/bin/sbcl"))))
+  :config
+  (load (expand-file-name "~/quicklisp/slime-helper.el"))
+  (slime-setup '(
+                 slime-asdf
+                 slime-autodoc
+                 slime-editing-commands
+                 slime-fancy
+                 slime-fancy-inspector
+                 slime-fontifying-fu
+                 slime-fuzzy
+                 slime-indentation
+                 slime-mdot-fu
+                 slime-package-fu
+                 slime-references
+                 slime-repl
+                 slime-sbcl-exts
+                 slime-scratch
+                 slime-xref-browser
+                   ))
+    (slime-autodoc-mode)
+    (setq slime-complete-symbol*-fancy t)
+    (setq slime-complete-symbol-function
+          'slime-fuzzy-complete-symbol))
+
+(use-package slime-company
+  :after company)
+
+(straight-use-package 'sly)
+(straight-use-package 'sly-repl-ansi-color)
+(straight-use-package 'sly-macrostep)
+
+(use-package sml-mode
+          :mode "\\.s\\(?:ml\\|ig\\)\\'")
+
+(use-package company-mlton
+      :straight '(company-mlton :type git :host github :repo "MatthewFluet/company-mlton")
+      :after company
+      :hook (sml-mode . company-mlton-init)
+      :config
+      (add-to-list 'company-backends 'company-mlton-grouped-backend))
+
+(defmacro file! ()
+  "Return the file of the file this macro was called."
+  (or
+   ;; REVIEW: Use `macroexp-file-name' once 27 support is dropped.
+   (let ((file (car (last current-load-list))))
+     (if (stringp file) file))
+   (bound-and-true-p byte-compile-current-file)
+   load-file-name
+   buffer-file-name   ; for `eval'
+   (error "file!: cannot deduce the current file path")))
+
+(defmacro dir! ()
+  "Return the directory of the file this macro was called."
+   (let (file-name-handler-alist)
+     (file-name-directory (macroexpand '(file!)))))
+
+(defmacro add-load-path! (&rest dirs)
+  "Add DIRS to `load-path', relative to the current file.
+The current file is the file from which `add-to-load-path!' is used."
+  `(let ((default-directory (dir!))
+         file-name-handler-alist)
+     (dolist (dir (list ,@dirs))
+       (cl-pushnew (expand-file-name dir) load-path :test #'string=))))
+
+(add-load-path! (car (file-expand-wildcards "/usr/lib64/erlang/lib/tools-*/emacs")))
+
+;; just right mode -- comint, etags, electric modes, flymake
+(use-package erlang
+  ;; :straight '(:type built-in) ;; DO NOT clone whole otp
+  :load-path (lambda () (car (file-expand-wildcards "/usr/lib64/erlang/lib/tools-*/emacs")))
+  :hook (erlang-mode . flymake-mode)
+  :hook (erlang-mode . flycheck-mode)
+  :hook (erlang-mode . lsp)
+  :config
+  ;; prevent annoying hang-on-compile
+  (defvar inferior-erlang-prompt-timeout t)
+  ;; default node name to emacs@localhost
+  (setq inferior-erlang-machine-options '("-sname" "emacs"))
+  (setq erlang-root-dir "/usr/lib64/erlang")
+  (setq lsp-ui-doc-enable t)
+  (require 'erlang-start))
+
+;; outdated solution, use the 'lsp-mode
+(use-package distel
+  :after erlang
+  :straight '(:host github :repo "/massemanet/distel")
+  :load-path (lambda () (car (file-expand-wildcards "/usr/lib64/erlang/lib/tools-*/emacs")))
+  :init
+  (require 'erlang-start)
+  :config
+  (add-load-path! (car (file-expand-wildcards "/usr/lib64/erlang/lib/tools-*/emacs")))
+  (distel-setup)
+  (require 'company-distel)
+  (require 'company-distel-frontend))
+
+(use-package company-distel
+ :straight '(:host github :repo "sebastiw/distel-completion" :files ("company-distel.el"))
+ :hook (erlang-mode .
+                    (lambda ()
+                      (push 'company-distel company-backends))))
+
+(use-package merlin
+  :after company
+  :config
+  (add-to-list 'company-backends 'merlin-company-backend)
+  (setq merlin-completion-with-doc t))
+
+(use-package tuareg
+  :hook (tuareg-mode-local-vars . merlin-mode)
+  :hook (tuareg-mode-local-vars . lsp)
+  :hook (tuareg-mode-local-vars . tree-sitter-mode)
+  :config
+  (setq tuareg-prettify-symbols-full t)
+  (setq tuareg-opam-insinuate t)
+  (tuareg-opam-update-env (tuareg-opam-current-compiler)))
+
+(use-package flycheck-ocaml
+  :after merlin
+  :hook (tuareg-mode . flycheck-ocaml-setup))
+
+(use-package merlin-eldoc
+  :after merlin
+  :hook (merlin-mode . merlin-eldoc-setup))
+
+(use-package merlin-imenu
+  :straight (:type built-in)
+  :after merlin
+  :hook (merlin-mode . merlin-use-merlin-imenu))
+
+(use-package ocamlformat
+  :commands ocamlformat)
+
+(use-package ocp-indent
+  :hook (tuareg-mode . ocp-setup-indent))
+
+(use-package merlin-iedit
+  :after iedit)
+
+(use-package utop
+    :hook (tuareg-mode . utop-minor-mode))
 
 (use-package company-c-headers
   :after company
@@ -1904,6 +2071,7 @@ If INITIAL is non-nil, use as initial input."
                            (push 'company-clang comnany-backends)
                            (semantic-mode t)
                            ))
+  :hook (c-mode-common . tree-sitter-mode)
   :hook (c++-mode . (lambda ()
                       (interactive)
                       (setq flycheck-clang-language-standard "c++20")))
@@ -2348,6 +2516,8 @@ delete."
 (use-package python-mode
   :mode "\\.py\\'"
   :interpreter "ipython"
+  :hook (python-mode . tree-sitter-mode)
+
   :hook (python-mode . lsp-deferred)
   :hook (python-mode . (lambda ()
                          (interacive)
@@ -2406,9 +2576,7 @@ delete."
   :mode "\\.rs\\'")
 
 (add-hook 'lisp-mode-hook (lambda ()
-                            (unless (featurep 'slime)
-                              (require 'slime)
-                              (normal-mode))))
+                              (require 'slime)))
 
 (with-eval-after-load 'slime
   (when (executable-find "sbcl")
