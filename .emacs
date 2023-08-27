@@ -1672,6 +1672,9 @@ If INITIAL is non-nil, use as initial input."
   :after yasnippet
   :straight (doom-snippets :type git :host github :repo "doomemacs/snippets" :files ("*.el" "*")))
 
+(use-package ivy-yasnippet
+  :after (ivy yasnippet))
+
 ;; TODO: convert to :bind
 (use-package auto-yasnippet
   :after yasnippet
@@ -2006,6 +2009,30 @@ The current file is the file from which `add-to-load-path!' is used."
                     (lambda ()
                       (push 'company-distel company-backends))))
 
+(use-package haskell-mode
+    :custom
+    (haskell-stylish-on-save t)
+    :hook (haskell-mode . (lambda ()
+                            (interactive)
+                            (turn-on-haskell-doc-mode)
+                            (turn-on-haskell-indentation))))
+
+  (use-package flycheck-haskell
+    :after flycheck)
+
+  (use-package company-ghci
+    :after company
+    :config
+    (add-to-list 'company-backends 'company-ghci))
+
+  (use-package lsp-haskell
+    :after lsp
+    :hook ((haskell-mode . lsp)
+           (literate-haskell-mode . lsp))
+    :init
+    (setq lsp-haskell-server-path "haskell-language-server-wrapper")
+    (setq lsp-haskell-server-args ()))
+
 (use-package merlin
   :after company
   :config
@@ -2045,6 +2072,33 @@ The current file is the file from which `add-to-load-path!' is used."
 
 (use-package utop
     :hook (tuareg-mode . utop-minor-mode))
+
+(use-package lsp-metals
+  :ensure t
+  :custom
+  ;; You might set metals server options via -J arguments. This might not always work, for instance when
+  ;; metals is installed using nix. In this case you can use JAVA_TOOL_OPTIONS environment variable.
+  (lsp-metals-server-args '(;; Metals claims to support range formatting by default but it supports range
+                            ;; formatting of multiline strings only. You might want to disable it so that
+                            ;; emacs can use indentation provided by scala-mode.
+                            "-J-Dmetals.allow-multiline-string-formatting=off"
+                            ;; Enable unicode icons. But be warned that emacs might not render unicode
+                            ;; correctly in all cases.
+                            "-J-Dmetals.icons=unicode"))
+  ;; In case you want semantic highlighting. This also has to be enabled in lsp-mode using
+  ;; `lsp-semantic-tokens-enable' variable. Also you might want to disable highlighting of modifiers
+  ;; setting `lsp-semantic-tokens-apply-modifiers' to `nil' because metals sends `abstract' modifier
+  ;; which is mapped to `keyword' face.
+  (lsp-metals-enable-semantic-highlighting t)
+  :hook (scala-mode . lsp))
+
+(use-package scala-mode
+  :custom
+    (flycheck-scala-executable "scalac --color never")
+  :interpreter
+    ("scala3 --color never" . scala-mode)
+  :config
+    (setq prettify-symbols-alist scala-prettify-symbols-alist))
 
 (use-package company-c-headers
   :after company
@@ -2562,9 +2616,6 @@ delete."
   :hook (python-mode . tree-sitter-mode)
 
   :hook (python-mode . lsp-deferred)
-  :hook (python-mode . (lambda ()
-                         (interacive)
-                         (semantic-mode t)))
   :config
   (setq tab-width     4
         python-indent 4)
@@ -2576,7 +2627,7 @@ delete."
         python-shell-prompt-detect-failure-warning nil))
 
 ;;; an actual mode which uses it all
-(use-package elpy
+(use-package elpy-mode
   :demand
   :mode "\\.py\\'"
   :bind
