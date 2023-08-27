@@ -634,6 +634,7 @@
    (org . t)
    (shell . t)
    (awk . t)
+   (C . t)
    (scheme . t)
    (ocaml . t)
    (python . t)
@@ -1660,12 +1661,13 @@ If INITIAL is non-nil, use as initial input."
   :hook (lsp-completion-mode . (lambda ()
                                  (remq 'company-capf company-backends)))
   :init
-  (setq lsp-modeline-diagnostics-enable nil)
+  (setq lsp-enable-semantic-highlighting t)
+  (setq lsp-modeline-diagnostics-enable t)
+  (setq lsp-headerline-breadcrumb-enable t)
   (setq lsp-keep-workspace-alive nil)
   (setq lsp-auto-execute-action nil)
   (setq lsp-enable-folding nil)
   (setq lsp-enable-on-type-formatting t)
-  (setq lsp-headerline-breadcrumb-enable t)
   (setq lsp-auto-configure t))
 
 (use-package company-lsp
@@ -1685,7 +1687,7 @@ If INITIAL is non-nil, use as initial input."
         lsp-ui-doc-delay 0.75           ; 0.2 (default) is too naggy
         lsp-ui-doc-position 'at-point
         lsp-ui-sideline-ignore-duplicate t)
-  (setq lsp-signature-auto-activate nil)
+  (setq lsp-signature-auto-activate t)
   (setq lsp-lens-enable t)
   (setq lsp-enable-symbol-highlighting t)
   (setq lsp-ui-doc-enable t)
@@ -1695,7 +1697,7 @@ If INITIAL is non-nil, use as initial input."
   (setq lsp-ui-peek-fontify 'always)
   (setq lsp-eldoc-enable-hover t)
   (setq lsp-modeline-code-actions-enable nil)
-  ;; (setq lsp-ui-sideline-enable nil)
+  (setq lsp-ui-sideline-enable nil)
   (setq lsp-ui-sideline-show-hover t)
   (setq lsp-ui-sideline-show-diagnostics t)
   (setq lsp-ui-sideline-show-code-actions nil)
@@ -1735,10 +1737,18 @@ If INITIAL is non-nil, use as initial input."
              (local-set-key "\C-c\C-s" 'semantic-ia-show-summary)
              (push 'company-semantic company-backends)))
 
-(straight-use-package 'google-c-style)
+(use-package google-c-style
+  :hook (c-mode-common . google-set-c-style)
+  :hook (c-mode-common . google-make-newline-indent))
 
 (use-package clang-format
   :commands clang-format)
+
+(use-package disaster
+  :commands (disaster))
+
+(use-package rmsbolt
+  :commands (rmsbolt))
 
 (use-package rainbow-mode
   :config (rainbow-mode t))
@@ -1827,6 +1837,7 @@ If INITIAL is non-nil, use as initial input."
     (semantic-default-emacs-lisp-setup)))
 
 (use-package company-c-headers
+  :after company
   :config
   (add-to-list 'company-backends 'company-c-headers)
   (add-to-list 'company-c-headers-path-system "/usr/include/c++/v1/"))
@@ -1840,8 +1851,14 @@ If INITIAL is non-nil, use as initial input."
 
 ;; yet another cool tags solution
 (use-package rtags
-  :demand nil
+  :defer t
   :config
+  (setq rtags-autostart-diagnostics t
+        rtags-use-bookmarks nil
+        rtags-completions-enabled t
+        rtags-display-result-backend 'ivy
+        rtags-results-buffer-other-window t
+        rtags-jump-to-first-match nil)
   (progn
     (unless (rtags-executable-find "rc") (error "Binary rc is not installed!"))
     (unless (rtags-executable-find "rdm") (error "Binary rdm is not installed!"))
@@ -1854,18 +1871,13 @@ If INITIAL is non-nil, use as initial input."
     ;; Shutdown rdm when leaving emacs.
     (add-hook 'kill-emacs-hook 'rtags-quit-rdm)
     ))
-(use-package company-rtags
-  :demand nil
-  :config
-  (progn
-    (setq rtags-autostart-diagnostics t)
-    (rtags-diagnostics)
-    (setq rtags-completions-enabled t)
-    (push 'company-rtags company-backends)
-    ))
+
+(use-package ivy-rtags
+  :after rtagd)
 
 (use-package flycheck-rtags
-  :demand nil
+  :after rtags
+  :defer t
   :config
   (progn
     ;; ensure that we use only rtags checking
@@ -1899,11 +1911,34 @@ If INITIAL is non-nil, use as initial input."
   (with-eval-after-load 'semantic
     (semantic-default-c-setup)))
 
-(use-package gdb
-  :straight (:type built-in)
+(use-package cmake-mode
+   :config (push 'company-cmake company-backends))
+
+(use-package modern-cpp-font-lock
+  :hook (c++-mode . modern-c++-font-lock-mode))
+
+(use-package demangle-mode
+  :hook (c++mode . demandgle-mode))
+
+(use-package ccls
+  :hook (lsp-configure . (lambda ()
+    (setq ccls-sem-highlight-method                      ccls-sem-highlight-method)))
+  :init
+  (defvar ccls-sem-highlight-method 'font-lock)
+  (with-eval-after-load 'projectile
+    (add-to-list 'projectile-globally-ignored-directories "^.ccls-cache$")
+    (add-to-list 'projectile-project-root-files-bottom-up ".ccls-root")
+    (add-to-list 'projectile-project-root-files-top-down-recurring "compile_commands.json"))
+  )
+
+(use-package gdb-mi
+;;  :straight (:type built-in)
   :init
   (setq gdb-many-windows t
         gdb-show-main t))
+
+(use-package realgud
+  :defer t)
 
 ;; cool but outdated
 ;; relies on rtags
@@ -2316,8 +2351,7 @@ delete."
   :hook (python-mode . lsp-deferred)
   :hook (python-mode . (lambda ()
                          (interacive)
-                         (semantic-mode t)
-                         (elpy-mode t)))
+                         (semantic-mode t)))
   :config
   (setq tab-width     4
         python-indent 4)
@@ -2330,6 +2364,7 @@ delete."
 
 ;;; an actual mode which uses it all
 (use-package elpy
+  :demand
   :mode "\\.py\\'"
   :bind
   (:map elpy-mode-map
