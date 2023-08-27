@@ -365,6 +365,12 @@
 (setq save-abbrevs 'silently)
 ;; (bind-key "M-/" 'hippie-expand)
 
+(use-package dabbrev
+  :bind (("M-/" . dabbrev-completion)
+         ("C-M-/" . dabbrev-expand))
+  :custom
+  (dabbrev-ignored-buffer-regexps '("\\.\\(?:pdf\\|jpe?g\\|png\\)\\'")))
+
 (auto-save-visited-mode t)
 
 (recentf-mode t)
@@ -1060,17 +1066,24 @@
 (straight-use-package 'fzf)
 (straight-use-package 'ag)
 
+;; frontend
 (use-package ripgrep
   :commands ripgrep-regexp)
 
+;; some fancy shit
 (use-package deadgrep
   :commands deadgrep)
 
+;; edit the buffer (can be toggled from *grep*
 (use-package wgrep
   :commands wgrep-change-to-wgrep-mode
   :config
   (define-key grep-mode-map (kbd "w") 'wgrep-change-to-wgrep-mode)
   (setq wgrep-auto-save-buffer t))
+
+;; rgrep replacement
+(use-package urgrep
+  :commands urgrep)
 
 (setq completions-format 'one-column) ;; like ido
 (setq completion-styles '(flex basic partial-completion emacs22))
@@ -1096,6 +1109,7 @@
   (global-corfu-mode)
   :config
   (setq corfu-auto t
+        corfu-preview-current t
         corfu-quit-no-match t))
 
 (add-hook 'eshell-mode-hook
@@ -1252,6 +1266,7 @@ If INITIAL is non-nil, use as initial input."
     ([remap switch-to-buffer] .            #'consult-buffer)
     ([remap switch-to-buffer-other-window] . #'consult-buffer-other-window)
     ([remap switch-to-buffer-other-frame] . #'consult-buffer-other-frame)
+    ([remap dired]                      .  #'consult-dir)
     ([remap yank-pop] .                    #'consult-yank-pop))
   :config
   (setq consult-project-root-function #'projectile-project-root
@@ -1361,12 +1376,12 @@ If INITIAL is non-nil, use as initial input."
    ([remap org-goto]               .  #'counsel-org-goto)
    ([remap org-set-tags-command]   .  #'counsel-org-tag)
    ([remap projectile-compile-project] . #'+ivy/project-compile)
-   ([remap recentf-open-files]     .  #'counsel-recentf)
+   ;; ([remap recentf-open-files]     .  #'counsel-recentf)
    ([remap set-variable]           .  #'counsel-set-variable)
    ([remap swiper]                 .  #'counsel-grep-or-swiper)
    ([remap insert-char]            .  #'counsel-unicode-char)
-   ([remap yank-pop]               .  #'counsel-yank-pop)
-   ([remap dired] . #'counsel-dired)
+   ;; ([remap yank-pop]               .  #'counsel-yank-pop)
+   ;; ([remap dired]                  .  #'counsel-dired)
    ("C-x B" . counsel-switch-buffer-other-window)
    ("M-s r" . counsel-rg)
    ("C-c r" . counsel-rg)
