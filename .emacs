@@ -1555,6 +1555,11 @@ If INITIAL is non-nil, use as initial input."
           (company-abbrev company-dabbrev company-dabbrev-code)
           )))
 
+(define-key company-active-map (kbd "\C-n") 'company-select-next)
+(define-key company-active-map (kbd "\C-p") 'company-select-previous)
+(define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
+(define-key company-active-map (kbd "M-.") 'company-show-location)
+
 ;; prescient will be loaded on demand
 (use-package company-prescient
   :hook (company-mode . company-prescient-mode)
@@ -1852,6 +1857,7 @@ If INITIAL is non-nil, use as initial input."
 ;; comint, etc.
 (use-package slime
   :hook (lisp-mode . slime-mode)
+  ;; :hook (lisp-mode-local-vars . slime-editing-mode)
   :hook (lisp-mode . (lambda ()
                              (interactive)
                              (electric-pair-mode -1)
@@ -1861,6 +1867,7 @@ If INITIAL is non-nil, use as initial input."
   (setq inferior-lisp-program "sbcl")
   (setq slime-lisp-implementations
           '((sbcl ("/usr/bin/sbcl"))))
+  (setq slime-auto-start 'always)
   :config
   (load (expand-file-name "~/quicklisp/slime-helper.el"))
   (slime-setup '(
@@ -1871,6 +1878,7 @@ If INITIAL is non-nil, use as initial input."
                  slime-fancy-inspector
                  slime-fontifying-fu
                  slime-fuzzy
+                 slime-company
                  slime-indentation
                  slime-mdot-fu
                  slime-package-fu
@@ -1883,14 +1891,23 @@ If INITIAL is non-nil, use as initial input."
     (slime-autodoc-mode)
     (setq slime-complete-symbol*-fancy t)
     (setq slime-complete-symbol-function
-          'slime-fuzzy-complete-symbol))
+          'slime-fuzzy-complete-symbol)
+    (slime-auto-start))
+
+(use-package slime-repl-ansi-color
+  :init
+  (add-to-list 'slime-contribs 'slime-repl-ansi-color))
 
 (use-package slime-company
-  :after company)
+  :after (slime company)
+  :config (setq slime-company-completion 'fuzzy
+                slime-company-after-completion 'slime-company-just-one-space))
 
-(straight-use-package 'sly)
-(straight-use-package 'sly-repl-ansi-color)
-(straight-use-package 'sly-macrostep)
+;; (use-package sly
+;;   :hook (lisp-mode-local-vars . sly-editing-mode)
+;; )
+;; (straight-use-package 'sly-repl-ansi-color)
+;; (straight-use-package 'sly-macrostep)
 
 (use-package sml-mode
           :mode "\\.s\\(?:ml\\|ig\\)\\'")
@@ -1930,7 +1947,7 @@ The current file is the file from which `add-to-load-path!' is used."
 
 ;; just right mode -- comint, etags, electric modes, flymake
 (use-package erlang
-  ;; :straight '(:type built-in) ;; DO NOT clone whole otp
+  :straight '(:type built-in) ;; DO NOT clone whole otp
   :load-path (lambda () (car (file-expand-wildcards "/usr/lib64/erlang/lib/tools-*/emacs")))
   :hook (erlang-mode . flymake-mode)
   :hook (erlang-mode . flycheck-mode)
