@@ -2015,6 +2015,9 @@ If INITIAL is non-nil, use as initial input."
 (use-package! lua-mode
   :mode "\\.lua?\\'"
   :hook (lua-mode . lsp-deferred)
+  :hook (lua-mode . (lambda ()
+                      (setq-local tab-width 2
+                                  indent-tabs-mode t)))
   :init
   (setq lsp-clients-lua-language-server-install-dir "/opt/lua-language-server")
   (setq lua-default-application "luajit"))
