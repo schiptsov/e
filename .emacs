@@ -360,11 +360,12 @@
 
 (delete-selection-mode t)
 
-(global-set-key [remap dabbrev-expand] 'hippie-expand)
-(abbrev-mode t)
 (setq save-abbrevs 'silently)
+(abbrev-mode t)
+;; (global-set-key [remap dabbrev-expand] 'hippie-expand)
 ;; (bind-key "M-/" 'hippie-expand)
 
+;; this will be a corfu completion, and vertico
 (use-package dabbrev
   :bind (("M-/" . dabbrev-completion)
          ("C-M-/" . dabbrev-expand))
@@ -373,19 +374,19 @@
 
 (auto-save-visited-mode t)
 
-(recentf-mode t)
 (setq recentf-exclude `(,(expand-file-name "straight/build/" user-emacs-directory)
                         ,(expand-file-name "eln-cache/" user-emacs-directory)
                         ,(expand-file-name "etc/" user-emacs-directory)
                         ,(expand-file-name "var/" user-emacs-directory)))
+(recentf-mode t)
 
+;; will be later rebound by consult
 (defun find-recent-file ()
   "Find a file that was recently visted using `completing-read'."
   (interactive)
   (find-file (completing-read "Find recent file: " recentf-list nil t)))
 (global-set-key (kbd "C-c r") #'find-recent-file)
 
-(setq history-length t)
 (setq history-delete-duplicates t)
 (setq savehist-save-minibuffer-history 1)
 (setq savehist-additional-variables
@@ -393,6 +394,12 @@
         search-ring
         regexp-search-ring))
 (savehist-mode t)
+
+;; just use consult-yank-pop
+(use-package browse-kill-ring
+  :commands browse-kill-ring
+  :config
+  (setq browse-kill-ring-quit-action 'save-and-restore))
 
 (global-set-key [remap list-buffers] 'ibuffer)
 (global-set-key (kbd "C-x C-p") 'previous-buffer)  ; Overrides `mark-page'
@@ -510,16 +517,17 @@
 
 (global-set-key (kbd "C-c f") #'ffap)
 
+;; disks are cheap
 (use-package emacs
   :custom
   (auto-save-default t)
+  (auto-save-visited-mode t)
   (make-backup-files t)
   (backup-by-copying t)
+  (create-lockfiles t)
   (version-control t)
   (vc-make-backup-files t)
-  (delete-old-versions t)
-  (create-lockfiles t)
-  (auto-save-visited-mode t))
+  (delete-old-versions t))
 
 (use-package super-save
   :diminish
@@ -2003,6 +2011,13 @@ If INITIAL is non-nil, use as initial input."
       :hook (sml-mode . company-mlton-init)
       :config
       (add-to-list 'company-backends 'company-mlton-grouped-backend))
+
+(use-package! lua-mode
+  :mode "\\.lua?\\'"
+  :hook (lua-mode . lsp-deferred)
+  :init
+  (setq lsp-clients-lua-language-server-install-dir "/opt/lua-language-server")
+  (setq lua-default-application "luajit"))
 
 (defmacro file! ()
   "Return the file of the file this macro was called."
