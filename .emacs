@@ -33,7 +33,6 @@
 
 ;; a temporary kludge
 ;; TODO: remove this line
-(setq-default user-emacs-directory "/home/lngnmn2/.emacs1.d/")
 
 (setq byte-compile-warnings t)
 (setq native-comp-async-report-warnings-errors nil)
@@ -179,7 +178,8 @@
          (set-default-toplevel-value symbol value)))
 
 (set-fontset-font t 'unicode (font-spec :family "Noto Emoji") nil 'prepend)
-(set-fontset-font t 'devanagari (font-spec :family "Noto Sans Devanagari"))
+(set-fontset-font t 'devanagari (font-spec :family "Noto Sans Devanagari" :weight 'light))
+(set-fontset-font t 'tibetan (font-spec :family "Noto Serif Tibetan" :weight 'light))
 
 (setq find-file-visit-truename t)
 (setq vc-follow-symlinks t)
@@ -814,10 +814,12 @@
 
 (straight-use-package 'ef-themes)
 
+(straight-use-package 'gruvbox-theme)
+
 (use-package doom-themes
   :demand t
   :hook (after-init . (lambda ()
-                        (load-theme 'doom-nord t)))
+                        (load-theme 'doom-gruvbox t)))
   :hook (org-mode . (lambda ()
                       (require 'doom-themes-ext-org)
                       (doom-themes-org-config)))
@@ -825,7 +827,7 @@
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
         doom-themes-enable-italic t) ; if nil, italics is universally
   :config
-  (load-theme 'doom-nord t))
+  (load-theme 'doom-gruvbox t))
 
 (use-package solaire-mode
   :demand t
@@ -899,6 +901,18 @@
 (use-package writeroom-mode
   :commands writeroom-mode)
 
+(use-package nov
+  :mode ("\\.epub\\'" . nov-mode)
+  :hook (nov-mode . (lambda ()
+                      (visual-line-mode t)
+                      (visual-fill-column-mode t)
+                      (mixed-pitch-mode t)
+                      (variable-pitch-mode t)
+                      (focus-read-only-mode t)
+                      (hide-mode-line-mode t)))
+  :config
+  (setq nov-text-with 72))
+
 (use-package org-indent
   :straight '(:type built-in)
   :after org
@@ -917,6 +931,118 @@
 
 (use-package org-web-tools
   :after org)
+
+(use-package adaptive-wrap
+  :hook (LaTeX-mode . adaptive-wrap-prefix-mode)
+  :init (setq-default adaptive-wrap-extra-indent 0))
+
+(use-package cdlatex
+  :hook (LaTeX-mode . cdlatex-mode)
+  :hook (org-mode . org-cdlatex-mode)
+  :config
+  ;; Use \( ... \) instead of $ ... $.
+  (setq cdlatex-use-dollar-to-ensure-math t))
+
+(add-hook 'org-mode-hook 'turn-on-org-cdlatex)
+
+(with-eval-after-load 'org
+  (setq org-todo-keywords
+      '((sequence "TODO(t)" "NEXT(n)" "PLAN(c)" "WAITING" "SOMEDAY(s)" "READ(r)" "WRITE(w)" "PROGRAM(p)" "WATCH(v)" "LISTEN(l)" "ROUTINE" "DAILY" "DISCIPLINE" "|" "DONE(d)" "DELEGATED" "CANCELED")))
+
+  (setq org-tag-alist
+        '(("reading" . ?r) ("writing" . ?w) ("math" . ?m) ("programming" . ?p) ("assistant" . ?a) ("trading" . ?t) ("emacs" . ?e) ("neovim" . ?v) ("chore" . ?c) ("daily" . ?d) ("routine" . ?r)))
+
+  (setq org-capture-templates
+        '(("i" "INBOX" entry (file+headline "~/INBOX.org" "Inbox")
+           "* %?\n  %i\n  %a" :prepend t :kill-buffer t)
+          ("t" "TODO" entry (file+headline "~/TODO.org" "Tasks")
+           "* TODO %?\n  %i\n  %a" :prepend t :kill-buffer t)
+          ("p" "PLAN" entry (file+headline "~/PLAN.org" "Plans")
+           "* PLAN %?\n  %i\n  %a" :prepend t :kill-buffer t)
+          ("n" "NOTE" entry (file+datetree "~/NOTES.org" "Notes")
+           "* %?\nEntered on %U\n  %i\n  %a" :prepend t :kill-buffer t)))
+  )
+
+;; "unstructured" note taking
+;; we use libraries from a bloatware, maybe just a single function
+;; this is also delegation and use of stable interfaces
+(use-package org-roam
+  :after org
+  :custom
+  (org-roam-directory (expand-file-name "org-roam" (xdg-data-home)))
+  (org-roam-completion-everywhere t)
+  (org-roam-capture-templates
+   '(("d" "default" plain "%?"
+        :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org" "#+TITLE: ${title}\n#+DATE: %U\n")
+        :unnarrowed t)))
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n g" . org-roam-graph)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n c" . org-roam-capture)
+         ("C-c n j" . org-roam-dailies-capture-today)
+           :map org-mode-map
+           ("C-M-i" . completion-at-point))
+  :config
+  (org-roam-setup)
+  (org-roam-db-autosync-mode))
+
+;; this has the same universal notions of sets and relations as SQL
+;; https://github.com/alphapapa/org-ql/blob/master/examples.org
+(use-package org-ql
+  :commands (org-ql-search org-ql-find))
+
+(use-package org-super-agenda
+  :hook (org-agenda . org-super-agenda-mode))
+
+(with-eval-after-load 'org-agenda
+  (let ((inhibit-message t))
+    (org-super-agenda-mode t)))
+
+(setq org-agenda-skip-scheduled-if-done t
+      org-agenda-skip-deadline-if-done t
+      org-agenda-include-deadlines t
+      org-agenda-block-separator nil
+      org-agenda-compact-blocks t)
+
+;; https://orgmode.org/worg/org-tutorials/tracking-habits.html
+(setq org-agenda-custom-commands
+      '(("h" "Habits"
+         ((agenda ""))
+         ((org-agenda-show-log t)
+          (org-agenda-ndays 7)
+          (org-agenda-log-mode-items '(state))
+          (org-agenda-skip-function '(org-agenda-skip-entry-if 'notregexp ":DAILY:"))))
+        ("o" "Overview"
+         ((agenda "" ((org-agenda-span 'day)
+                      (org-super-agenda-groups
+                       '((:name "Today"
+                          :time-grid t
+                          :date today
+                          :todo "TODAY"
+                          :scheduled today
+                          :order 1)
+                         (:habit t)))))
+          (alltodo "" ((org-agenda-overriding-header "")
+                       (org-super-agenda-groups
+                        '((:name "Next to do"
+                           :todo "NEXT"
+                           :order 1)
+                          (:name "Important"
+                           :tag "Important"
+                           :priority "A"
+                           :order 6)
+                          (:name "Due Today"
+                           :deadline today
+                           :order 2)
+                          (:name "Due Soon"
+                           :deadline future
+                           :order 8)
+                          (:name "Overdue"
+                           :deadline past
+                           :face error
+                           :order 7)
+                          (:discard (:tag ("Chore" "Routine" "Daily")))))))))))
 
 (use-package idle-org-agenda
   :after org-agenda
@@ -1922,7 +2048,23 @@ If INITIAL is non-nil, use as initial input."
 (use-package highlight-numbers
   :hook (prog-mode . highlight-numbers-mode))
 
-(autoload 'octave-mode "octave-mod" nil t)
+;; (add-to-list 'auto-mode-alist '("\\.f\\'" . f90-mode))
+(use-package f90-mode
+  :straight '(:type built-in)
+  :hook (f90-mode . lsp-deferred)
+  :mode "\\.f\\'")
+
+(use-package f90-interface-browser
+  :after f90-mode)
+
+(use-package fortran-tags
+ :straight '(:type built-in)
+   :after f90-mode)
+
+;; (autoload 'octave-mode "octave-mod" nil t)
+(use-package octave-mode
+  :straight '(:type built-in)
+  :mode "\\.m\\'")
 
 (use-package emacs-lisp-mode
   :straight '(:type built-in)
@@ -2012,7 +2154,7 @@ If INITIAL is non-nil, use as initial input."
       :config
       (add-to-list 'company-backends 'company-mlton-grouped-backend))
 
-(use-package! lua-mode
+(use-package lua-mode
   :mode "\\.lua?\\'"
   :hook (lua-mode . lsp-deferred)
   :hook (lua-mode . (lambda ()
@@ -2259,6 +2401,14 @@ The current file is the file from which `add-to-load-path!' is used."
 (use-package demangle-mode
   :hook (c++mode . demandgle-mode))
 
+(use-package gdb-mi
+  :init
+  (setq gdb-many-windows t
+        gdb-show-main t))
+
+(use-package realgud
+  :commands realgud:gdb)
+
 (use-package ccls
   :hook (lsp-configure . (lambda ()
     (setq ccls-sem-highlight-method                      ccls-sem-highlight-method)))
@@ -2269,15 +2419,6 @@ The current file is the file from which `add-to-load-path!' is used."
     (add-to-list 'projectile-project-root-files-bottom-up ".ccls-root")
     (add-to-list 'projectile-project-root-files-top-down-recurring "compile_commands.json"))
   )
-
-(use-package gdb-mi
-;;  :straight (:type built-in)
-  :init
-  (setq gdb-many-windows t
-        gdb-show-main t))
-
-(use-package realgud
-  :defer t)
 
 ;; cool but outdated
 ;; relies on rtags
