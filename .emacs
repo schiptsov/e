@@ -28,6 +28,9 @@
 ;;; use hooks and implicit defers,
 ;;; not afters and configs
 ;;; some packages work only as modes in configs
+;;;
+;;; This file is already bloated and needs a cleanup
+;;;
 
 (setq-default load-prefer-newer t)
 
@@ -154,11 +157,11 @@
 ;; the font section
 (add-to-list 'default-frame-alist '(font . "SF Mono Light 16"))
 
-(set-face-font 'default  (font-spec :family "SF Mono" :foundry "APPL" :weight 'light :size 22 :height 158))
+(set-face-font 'default  (font-spec :family "SF Mono" :foundry "APPL" :weight 'light :size 16 :height 158))
 
-(set-face-font 'fixed-pitch  (font-spec :family "SF Mono" :foundry "APPL" :weight 'light :size 22 :height 158))
-(set-face-font 'fixed-pitch-serif (font-spec :family "SF Pro Display" :foundry "APPL" :weight 'light :size 22 :height 158))
-(set-face-font 'variable-pitch (font-spec :family "SF Pro Text" :foundry "APPL" :weight 'light :size 22 :height 158))
+(set-face-font 'fixed-pitch  (font-spec :family "SF Mono" :foundry "APPL" :weight 'light :size 16 :height 158))
+(set-face-font 'fixed-pitch-serif (font-spec :family "SF Pro Display" :foundry "APPL" :weight 'light :size 16 :height 158))
+(set-face-font 'variable-pitch (font-spec :family "SF Pro Text" :foundry "APPL" :weight 'light :size 16 :height 158))
 
 (set-face-attribute 'font-lock-constant-face nil :weight 'normal)
 (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
@@ -202,7 +205,8 @@
 
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
-(setq whitespace-style '(face spaces tabs newline space-mark tab-mark))
+(setq whitespace-style '(face spaces empty tabs newline space-mark tab-mark))
+
 (global-whitespace-mode t)
 (global-set-key (kbd "C-c w") #'whitespace-mode)
 
@@ -315,8 +319,10 @@
 (add-hook 'prog-mode-hook       #'other-prettify-symbols-hook)
 (add-hook 'clojure-mode-hook    #'gas-clj-prettify-symbols-hook)
 
-(setq prettify-symbols-unprettify-at-point 'right-edge)
-(global-prettify-symbols-mode t)
+(use-package emacs
+  :config
+  (setq prettify-symbols-unprettify-at-point 'right-edge)
+  (global-prettify-symbols-mode t))
 
 (setq sentence-end-double-space nil)
 
@@ -325,21 +331,25 @@
 (setq-default truncate-lines nil)
 (add-hook 'eshell-mode-hook (lambda () (setq-local truncate-lines nil)))
 
-(setq-default tab-width 4)
-(setq-default fill-column 72)
-(set-fill-column 72)
-(auto-fill-mode t)
+;; cannot fit 2 pages on a 1080p screen
+(use-package emacs
+  :config
+  (setq-default tab-width 4)
+  (setq-default fill-column 72)
+  (set-fill-column 72)
+  (auto-fill-mode t))
 
 ;; yet another cool hack
-
 (when (executable-find "fd")
   (setq find-program "fd"))
 
 (when (executable-find "aspell")
   (setq ispell-program-name "aspell"))
 
+;; uses a face unsupported by themes
 (global-highlight-changes-mode -1)
 
+;; ugly
 (global-display-fill-column-indicator-mode -1)
 
 (global-visual-line-mode t)
@@ -347,8 +357,12 @@
 
 (global-subword-mode t)
 
+;; also show-smartparens-mode
 (show-paren-mode t)
+
+;; C-SPC
 (transient-mark-mode t)
+(setq set-mark-command-repeat-pop t)
 
 ;; clashes with spartparens
 (setq-default electric-indent-chars '(?\n ?\^?))
@@ -968,6 +982,8 @@
 ;; this is also delegation and use of stable interfaces
 (use-package org-roam
   :after org
+  :diminish 'Org-roam
+  :hook (after-init . org-roam-mode)
   :custom
   (org-roam-directory (expand-file-name "org-roam" (xdg-data-home)))
   (org-roam-completion-everywhere t)
@@ -990,44 +1006,47 @@
 ;; this has the same universal notions of sets and relations as SQL
 ;; https://github.com/alphapapa/org-ql/blob/master/examples.org
 (use-package org-ql
+  :after org
   :commands (org-ql-search org-ql-find))
 
 (use-package org-super-agenda
+  :after org-agenda
   :hook (org-agenda . org-super-agenda-mode))
 
 (with-eval-after-load 'org-agenda
   (let ((inhibit-message t))
     (org-super-agenda-mode t)))
 
-(setq org-agenda-skip-scheduled-if-done t
-      org-agenda-skip-deadline-if-done t
-      org-agenda-include-deadlines t
-      org-agenda-block-separator nil
-      org-agenda-compact-blocks t)
+(with-eval-after-load 'org-agenda
+  (setq org-agenda-skip-scheduled-if-done t
+        org-agenda-skip-deadline-if-done t
+        org-agenda-include-deadlines t
+        org-agenda-block-separator nil
+        org-agenda-compact-blocks t)
 
 ;; https://orgmode.org/worg/org-tutorials/tracking-habits.html
-(setq org-agenda-custom-commands
-      '(("h" "Habits"
-         ((agenda ""))
-         ((org-agenda-show-log t)
-          (org-agenda-ndays 7)
-          (org-agenda-log-mode-items '(state))
-          (org-agenda-skip-function '(org-agenda-skip-entry-if 'notregexp ":DAILY:"))))
-        ("o" "Overview"
-         ((agenda "" ((org-agenda-span 'day)
-                      (org-super-agenda-groups
-                       '((:name "Today"
-                          :time-grid t
-                          :date today
-                          :todo "TODAY"
-                          :scheduled today
-                          :order 1)
-                         (:habit t)))))
-          (alltodo "" ((org-agenda-overriding-header "")
-                       (org-super-agenda-groups
-                        '((:name "Next to do"
-                           :todo "NEXT"
-                           :order 1)
+  (setq org-agenda-custom-commands
+        '(("h" "Habits"
+           ((agenda ""))
+           ((org-agenda-show-log t)
+            (org-agenda-ndays 7)
+            (org-agenda-log-mode-items '(state))
+            (org-agenda-skip-function '(org-agenda-skip-entry-if 'notregexp ":DAILY:"))))
+          ("o" "Overview"
+           ((agenda "" ((org-agenda-span 'day)
+                        (org-super-agenda-groups
+                         '((:name "Today"
+                            :time-grid t
+                            :date today
+                            :todo "TODAY"
+                            :scheduled today
+                            :order 1)
+                           (:habit t)))))
+            (alltodo "" ((org-agenda-overriding-header "")
+                         (org-super-agenda-groups
+                          '((:name "Next to do"
+                             :todo "NEXT"
+                             :order 1)
                           (:name "Important"
                            :tag "Important"
                            :priority "A"
@@ -1043,6 +1062,7 @@
                            :face error
                            :order 7)
                           (:discard (:tag ("Chore" "Routine" "Daily")))))))))))
+  )
 
 (use-package idle-org-agenda
   :after org-agenda
@@ -1239,7 +1259,9 @@
 
 ;; extends built-in completions, a-la vertico
 (use-package corfu
+  :demand
   :init
+  (setq-default tab-always-indent 'complete)
   (global-corfu-mode)
   :config
   (setq corfu-auto t
@@ -1433,6 +1455,8 @@ If INITIAL is non-nil, use as initial input."
     :init
   (map! :map lsp-mode-map [remap xref-find-apropos] #'consult-lsp-symbols))
 
+;; (use-package consult-todo :after consult)
+
 (use-package all-the-icons-completion
   :after (marginalia all-the-icons)
   :hook (marginalia-mode . #'all-the-icons-completion-marginalia-setup)
@@ -1444,6 +1468,9 @@ If INITIAL is non-nil, use as initial input."
 
 ;; will be loaded by ivy
 (straight-use-package 'flx)
+
+(setq isearch-lazy-count t)
+(setq isearch-yank-on-move t)
 
 ;; loat on-demand
 (use-package ivy
@@ -1712,6 +1739,7 @@ If INITIAL is non-nil, use as initial input."
   :diminish
   :hook (after-init . smartparens-global-strict-mode)
   :hook (prog-mode . turn-on-smartparens-strict-mode)
+  :hook (prog-mode . turn-on-show-smartparens-mode)
   :config
   (require 'smartparens-config))
 
@@ -2011,6 +2039,21 @@ If INITIAL is non-nil, use as initial input."
   (setq diff-hl-show-staged-changes nil)
   (global-diff-hl-mode t))
 
+
+(use-package selected
+  :ensure t
+  :commands selected-minor-mode
+  :init
+  (setq selected-org-mode-map (make-sparse-keymap))
+  :bind (:map selected-keymap
+              ("q" . selected-off)
+              ("u" . upcase-region)
+              ("d" . downcase-region)
+              ("w" . count-words-region)
+              ("m" . apply-macro-to-region-lines)
+              :map selected-org-mode-map
+              ("t" . org-table-convert-region)))
+
 (use-package expand-region
   :config (global-set-key (kbd "C-=") 'er/expand-region))
 
@@ -2044,6 +2087,12 @@ If INITIAL is non-nil, use as initial input."
   (setq ahs-case-fold-search nil
         ahs-default-range 'ahs-range-whole-buffer
         ahs-idle-interval 3.75))
+
+(use-package symbols-outline
+  :commands symbols-outline-follow-mode
+  :config
+  (setq symbols-outline-window-position 'left)
+  (setq symbols-outline-fetch-fn #'symbols-outline-lsp-fetch))
 
 (use-package highlight-numbers
   :hook (prog-mode . highlight-numbers-mode))
