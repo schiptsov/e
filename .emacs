@@ -850,6 +850,13 @@
   :hook (after-init . (lambda ()
                         (solaire-global-mode +1))))
 
+(use-package org-pretty-tags
+  :hook (org-mode . org-pretty-tags-mode))
+
+(use-package org-pretty-table
+  :straight '(:host github :repo "Fuco1/org-pretty-table")
+  :hook (org-mode . org-pretty-table-mode))
+
 (use-package org-modern
   :hook (org-mode . org-modern-mode)
   :config
@@ -946,9 +953,40 @@
 (use-package org-web-tools
   :after org)
 
+(use-package org-latex-preview
+  :straight '(:type built-in)
+  :hook (org-mode . org-latex-preview-auto-mode)
+  :commands org-latex-preview)
+
+
+;; (use-package predictive
+;;   :config
+;;   (set-default 'predictive-auto-add-to-dict t)
+;;   (setq predictive-main-dict 'rpg-dictionary
+;;         predictive-auto-learn t
+;;         predictive-add-to-dict-ask nil
+;;         predictive-use-auto-learn-cache nil
+;;         predictive-which-dict t))
+
+;; we absolutely want to edit latex within org-mode
+(use-package auctex
+  :commands auctex-mode
+  :hook  (LaTeX-mode . LaTeX-math-mode)
+  :config
+  (setq TeX-auto-save t)
+  (setq TeX-parse-self t)
+  (setq-default TeX-master nil))
+
+(use-package xenops
+  :hook (LaTeX-mode . xenops-mode))
+
 (use-package adaptive-wrap
   :hook (LaTeX-mode . adaptive-wrap-prefix-mode)
   :init (setq-default adaptive-wrap-extra-indent 0))
+
+(use-package org-auctex
+  :straight '(:host github :repo "karthink/org-auctex")
+  :hook (org-mode . org-auctex-mode))
 
 (use-package cdlatex
   :hook (LaTeX-mode . cdlatex-mode)
@@ -2472,7 +2510,6 @@ The current file is the file from which `add-to-load-path!' is used."
 ;; cool but outdated
 ;; relies on rtags
 (use-package cmake-ide
-  :demand nil
   :config
   (setq cmake-ide-flags-c++ (append '("-std=c++20")))
   (cmake-ide-setup))
