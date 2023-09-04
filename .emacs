@@ -229,7 +229,7 @@
 (use-package whitespace
   :straight '(:type built-in)
   :after doom-themes
-  :hook (prog-mode . whitespace-mode)
+  :hook (after-init . global-whitespace-mode)
   :custom
   (whitespace-style
    (quote
@@ -777,6 +777,7 @@
                       (add-hook 'after-save-hook #'org-babel-tangle :append :local)
                       (add-hook 'org-babel-after-execute-hook #'display-ansi-colors)))
   :hook (org-mode . (lambda ()
+                      (set-face-background 'org-block 'unspecified) ;; fix
                       (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
                       (set-face-attribute 'org-link nil :inherit 'fixed-pitch)
                       (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
@@ -784,7 +785,6 @@
                       (set-face-attribute 'org-date nil :inherit 'fixed-pitch)
                       (set-face-attribute 'org-special-keyword nil
                                           :inherit 'fixed-pitch)
-                      (solaire-mode t)
                       (mixed-pitch-mode t)
                       (variable-pitch-mode t)))
   :bind (:map org-mode-map
@@ -1036,7 +1036,7 @@
 (use-package org-roam
   :after org
   :diminish 'Org-roam
-  :hook (after-init . org-roam-mode)
+  ;; :hook (after-init . org-roam-mode)
   :custom
   (org-roam-directory (expand-file-name "org-roam" (xdg-data-home)))
   (org-roam-completion-everywhere t)
