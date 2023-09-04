@@ -542,7 +542,7 @@
   (add-hook 'compilation-filter-hook 'colourise-compilation-buffer))
 
 (use-package auto-compile
-  :demand t
+  :demand
   :config (auto-compile-on-load-mode))
 
 (use-package flymake
@@ -577,7 +577,7 @@
   (super-save-mode +1))
 
 (use-package undo-tree
-  :demand t
+  :demand
   :diminish
   :init
   (setq undo-tree-history-directory-alist `(("." . ,(concat user-emacs-directory "undo-tree-hist/"))))
@@ -591,12 +591,12 @@
 (straight-use-package 'fontaine)
 
 (use-package unicode-fonts
-  :demand t
+  :demand
   :config
   (unicode-fonts-setup))
 
 (use-package ligature
-  :demand t
+  :demand
   :diminish
   :config
   (ligature-set-ligatures 't '("www"))
@@ -604,7 +604,7 @@
   (global-ligature-mode 't))
 
 (use-package all-the-icons
-  :demand t)
+  :demand)
 
 ;; (use-package emojify
 ;;   :hook (after-init . global-emojify-mode)
@@ -858,7 +858,6 @@
   :hook (org-mode . org-fragtog-mode))
 
 (use-package solaire-mode
-  :demand t
   :hook (mixed-pitch-mode .  solaire-mode-reset)
   :hook (prog-mode . solaire-mode-reset)
   :hook (after-init . (lambda ()
@@ -917,12 +916,12 @@
   :straight '(org-pandoc-import :type git :host github :repo "tecosaur/org-pandoc-import"))
 
 (use-package guru-mode
-  :demand t
+  :demand
   :delight
   :config (guru-global-mode t))
 
 (use-package nyan-mode
-  :demand t
+  :demand
   :config
   (setq nyan-animate-nyancat t)
   (setq nyan-wavy-trail t)
@@ -1119,7 +1118,7 @@
 
 (use-package idle-org-agenda
   :after org-agenda
-  :demand t
+  :demand
   :config (idle-org-agenda-mode))
 
 (straight-use-package 'info+)
@@ -1135,7 +1134,7 @@
   :init (which-key-posframe-mode t))
 
 (use-package xclip
-  :demand t
+  :demand
   :config
   (setq select-enable-primary t)
   (xclip-mode t))
