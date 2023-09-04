@@ -154,6 +154,27 @@
   (setq select-enable-clipboard t
         select-enable-primary t))
 
+
+
+(straight-use-package 'ef-themes)
+
+;; default
+(straight-use-package 'gruvbox-theme)
+
+;; has to be early, because every face should inherit
+(use-package doom-themes
+  :demand
+  :hook (after-init . (lambda ()
+                        (load-theme 'doom-gruvbox t)))
+  :hook (org-mode . (lambda ()
+                      (require 'doom-themes-ext-org)
+                      (doom-themes-org-config)))
+  :init
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally
+  :config
+  (load-theme 'doom-gruvbox t))
+
 ;; the font section
 (add-to-list 'default-frame-alist '(font . "SF Mono Light 16"))
 
@@ -203,11 +224,18 @@
   (global-set-key (kbd "C-y") 'yank)
   (global-set-key (kbd "M-y") 'yank-pop))
 
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
+(add-hook 'before-save-hook #'delete-trailing-whitespace)
 
-(setq whitespace-style '(face spaces empty tabs newline space-mark tab-mark))
+(use-package whitespace
+  :straight '(:type built-in)
+  :after doom-themes
+  :hook (prog-mode . whitespace-mode)
+  :custom
+  (whitespace-style
+   (quote
+    (face tabs spaces trailing space-before-tab newline indentation
+  empty space-after-tab space-mark tab-mark))))
 
-(global-whitespace-mode t)
 (global-set-key (kbd "C-c w") #'whitespace-mode)
 
 (defvar base-prettify-symbols-alist
@@ -578,13 +606,14 @@
 (use-package all-the-icons
   :demand t)
 
-(use-package emojify
-  :hook (after-init . global-emojify-mode)
-  :config
-  (setq emojify-emoji-styles 'unicode)
-  (emojify-set-emoji-styles emojify-emoji-styles))
+;; (use-package emojify
+;;   :hook (after-init . global-emojify-mode)
+;;   :config
+;;   (setq emojify-emoji-styles 'unicode)
+;;   (emojify-set-emoji-styles emojify-emoji-styles))
 
 (use-package mixed-pitch
+  :demand
   :hook
   ((text-mode . mixed-pitch-mode)
    (help-mode . mixed-pitch-mode)
@@ -707,6 +736,7 @@
 
 (straight-use-package 'htmlize)
 (straight-use-package 'engrave-faces)
+;; (straight-use-package 'engrave-faces-latex)
 
 ;; Use the latest version
 (straight-use-package 'org-contrib)
@@ -719,8 +749,7 @@
 (straight-use-package 'ob-rust)
 (straight-use-package 'ob-sml)
 (use-package ob-erlang
-  :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang")
-  :defer t)
+  :straight '(ob-erlang :type git :host github :repo "xfwduke/ob-erlang"))
 
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -775,7 +804,7 @@
   (setq org-inline-src-prettify-results '("⟨" . "⟩"))
 
   (setq org-directory (expand-file-name "org" (xdg-data-home)))
-  (setq  org-agenda-files (list org-directory))
+  (setq org-agenda-files (list org-directory))
 
   (setq org-default-notes-file (expand-file-name "~/NOTES.org"))
 
@@ -805,6 +834,7 @@
         org-list-allow-alphabetical t
         org-export-in-background t)
 
+  (setq org-fontify-quote-and-verse-blocks t)
   (setq org-fontify-done-headline t)
 
   (bind-key "C-c k" 'org-cut-subtree org-mode-map)
@@ -814,6 +844,7 @@
   (global-set-key "\C-cl" 'org-store-link)
   (global-set-key "\C-ca" 'org-agenda)
 
+  ;; must be add-to-list and inside a hook
   (setq-local prettify-symbols-alist '(("#+BEGIN_SRC" . "»")
                                        ("#+END_SRC" . "«")
                                        ("#+begin_src" . "»")
@@ -825,23 +856,6 @@
 
 (use-package org-fragtog
   :hook (org-mode . org-fragtog-mode))
-
-(straight-use-package 'ef-themes)
-
-(straight-use-package 'gruvbox-theme)
-
-(use-package doom-themes
-  :demand t
-  :hook (after-init . (lambda ()
-                        (load-theme 'doom-gruvbox t)))
-  :hook (org-mode . (lambda ()
-                      (require 'doom-themes-ext-org)
-                      (doom-themes-org-config)))
-  :init
-  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
-        doom-themes-enable-italic t) ; if nil, italics is universally
-  :config
-  (load-theme 'doom-gruvbox t))
 
 (use-package solaire-mode
   :demand t
@@ -858,6 +872,7 @@
   :hook (org-mode . org-pretty-table-mode))
 
 (use-package org-modern
+  :demand
   :hook (org-mode . org-modern-mode)
   :config
   (setq org-modern-table t)
@@ -868,7 +883,7 @@
   :demand)
 
 (use-package org-appear
-  :demand t
+  :demand
   :hook (org-mode . org-appear-mode)
   :config
   (setq org-appear-autoemphasis t
@@ -955,9 +970,9 @@
 
 (use-package org-latex-preview
   :straight '(:type built-in)
-  :hook (org-mode . org-latex-preview-auto-mode)
+  :after org
+  :hook (org-mode . org-latex-preview)
   :commands org-latex-preview)
-
 
 ;; (use-package predictive
 ;;   :config
@@ -1496,6 +1511,7 @@ If INITIAL is non-nil, use as initial input."
 ;; (use-package consult-todo :after consult)
 
 (use-package all-the-icons-completion
+  :demand
   :after (marginalia all-the-icons)
   :hook (marginalia-mode . #'all-the-icons-completion-marginalia-setup)
   :init
