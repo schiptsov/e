@@ -844,7 +844,10 @@
   (global-set-key "\C-cl" 'org-store-link)
   (global-set-key "\C-ca" 'org-agenda)
 
-  ;; must be add-to-list and inside a hook
+)
+
+;; will be overwritten by org-modern
+(add-hook 'org-mode-hook (lambda ()
   (setq-local prettify-symbols-alist '(("#+BEGIN_SRC" . "»")
                                        ("#+END_SRC" . "«")
                                        ("#+begin_src" . "»")
@@ -852,7 +855,12 @@
                                        ("lambda"  . "λ")
                                        ("->" . "→")
                                        ("->>" . "↠")))
-  (setq-local prettify-symbols-unprettify-at-point 'right-edge))
+  (setq-local prettify-symbols-unprettify-at-point 'right-edge)))
+
+;; will stumble on emacs-lisp blocks
+(use-package org-src-context
+  :straight '(:host github :repo "karthink/org-src-context")
+  :hook (org-mode . org-src-context-mode))
 
 (use-package org-fragtog
   :hook (org-mode . org-fragtog-mode))
@@ -864,9 +872,11 @@
                         (solaire-global-mode +1))))
 
 (use-package org-pretty-tags
+  :diminish
   :hook (org-mode . org-pretty-tags-mode))
 
 (use-package org-pretty-table
+  :diminish
   :straight '(:host github :repo "Fuco1/org-pretty-table")
   :hook (org-mode . org-pretty-table-mode))
 
@@ -950,6 +960,7 @@
 
 (use-package org-indent
   :straight '(:type built-in)
+  :diminish
   :after org
   :hook (org-mode . org-indent-mode))
 
@@ -967,11 +978,15 @@
 (use-package org-web-tools
   :after org)
 
-(use-package org-latex-preview
-  :straight '(:type built-in)
-  :after org
-  :hook (org-mode . org-latex-preview)
-  :commands org-latex-preview)
+(use-package preview
+  :hook (LaTeX-mode . LaTeX-preview-setup)
+  :config
+  (setq-default preview-scale 1.4
+                preview-scale-function
+                (lambda () (* (/ 10.0 (preview-document-pt)) preview-scale))))
+
+(use-package latex-preview-pane
+  :commands org-latex-pane-mode)
 
 ;; (use-package predictive
 ;;   :config
@@ -982,21 +997,53 @@
 ;;         predictive-use-auto-learn-cache nil
 ;;         predictive-which-dict t))
 
+(add-to-list 'auto-mode-alist '("\\.tex\\'" . LaTeX-mode))
+
 ;; we absolutely want to edit latex within org-mode
 (use-package auctex
   :commands auctex-mode
-  :hook  (LaTeX-mode . LaTeX-math-mode)
+  :hook (LaTeX-mode . LaTeX-math-mode)
+  :hook ((tex-mode-local-vars-hook
+          latex-mode-local-vars-hook)
+         . #'lsp-defer)
   :config
-  (setq TeX-auto-save t)
-  (setq TeX-parse-self t)
+  (setq TeX-auto-save t
+        TeX-parse-self t
+        TeX-source-correlate-mode t
+        TeX-source-correlate-method 'synctex
+        ;; Don't start the Emacs server when correlating sources.
+        TeX-source-correlate-start-server nil
+        ;; Automatically insert braces after sub/superscript in `LaTeX-math-mode'.
+        TeX-electric-sub-and-superscript t
+        ;; Just save, don't ask before each compilation.
+        TeX-save-query nil)
   (setq-default TeX-master nil))
+
+(use-package auctex-latehmk
+  :after latex
+  :init
+  (setq auctex-latexmk-inherit-TeX-PDF-mode t)
+  :config
+  ;; Add LatexMk as a TeX target.
+  (auctex-latexmk-setup))
+
+(use-package company-auctex
+  :after company
+  :config
+  (add-to-list company-backends 'company-auctex-macros))
 
 (use-package xenops
   :hook (LaTeX-mode . xenops-mode))
 
 (use-package adaptive-wrap
   :hook (LaTeX-mode . adaptive-wrap-prefix-mode)
-  :init (setq-default adaptive-wrap-extra-indent 0))
+  :init (setq-default adaptive-wrap-extra-indent 1))
+
+(use-package org-latex-preview
+  :straight '(:type built-in)
+  :after org
+  :hook (org-mode . org-latex-preview)
+  :commands org-latex-preview)
 
 (use-package org-auctex
   :straight '(:host github :repo "karthink/org-auctex")
@@ -1259,11 +1306,50 @@
   :config
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
+;; this has pre-defined actions and the way to define your own
 (use-package avy
-  :bind ("C-:" . #'avy-goto-char)
-        ("C-'" . #'avy-goto-char-2)
-        ("M-g f" . #'avy-goto-line)
-        ("M-g w" . 'avy-goto-word-1))
+  :bind ("C-'" . #'avy-goto-char-timer)
+        ("C-:" . #'avy-goto-char-2)
+        ("M-g l" . #'avy-goto-line)
+        ("M-g w" . #'avy-goto-word-1)
+  :config
+  (setq avy-keys '(?q ?e ?r ?y ?u ?o ?p
+                   ?a ?s ?d ?f ?g ?h ?j
+                   ?k ?l ?' ?x ?c ?v ?b
+                   ?n ?, ?/))
+)
+
+(defun avy-action-helpful (pt)
+  (save-excursion
+    (goto-char pt)
+    (helpful-at-point))
+  (select-window
+   (cdr (ring-ref avy-ring 0)))
+  t)
+
+(setf (alist-get ?H avy-dispatch-alist) 'avy-action-helpful)
+
+(defun avy-action-copy-whole-line (pt)
+  (save-excursion
+    (goto-char pt)
+    (cl-destructuring-bind (start . end)
+        (bounds-of-thing-at-point 'line)
+      (copy-region-as-kill start end)))
+    (select-window
+     (cdr
+      (ring-ref avy-ring 0)))
+    t)
+
+(setf (alist-get ?w avy-dispatch-alist) 'avy-action-copy
+      (alist-get ?W avy-dispatch-alist) 'avy-action-copy-whole-line)
+
+(defun avy-action-yank-whole-line (pt)
+  (avy-action-copy-whole-line pt)
+  (save-excursion (yank-pop))
+  t)
+
+(setf (alist-get ?y avy-dispatch-alist) 'avy-action-yank
+      (alist-get ?Y avy-dispatch-alist) 'avy-action-yank-whole-line)
 
 (use-package avy-menu
   :after avy)
@@ -1879,15 +1965,15 @@ If INITIAL is non-nil, use as initial input."
   :after company
   :config
   (setq company-math-disallow-unicode-symbols-in-faces t)
-  (add-to-list 'company-backends 'company-math-symbols-latex)
-  (add-to-list 'company-backends 'company-math-symbols-unicode))
+  (add-to-list company-backends 'company-math-symbols-latex)
+  (add-to-list company-backends 'company-math-symbols-unicode))
 
 (use-package company-org-block
   :after company
   :custom
   (company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
   :hook (org-mode . (lambda ()
-                      (add-to-list 'company-backends 'company-org-block)
+                      (add-to-list company-backends 'company-org-block)
                       (company-mode +1))))
 
 (use-package company-statistics
@@ -1898,7 +1984,7 @@ If INITIAL is non-nil, use as initial input."
   :after company
   :config
   :hook (nxml-mode . (lambda ()
-                       (add-to-list 'company-backends 'company-web-html))))
+                       (add-to-list company-backends 'company-web-html))))
 
 (use-package flycheck
   :demand
@@ -2040,7 +2126,8 @@ If INITIAL is non-nil, use as initial input."
              (semanticdb-enable-gnu-global-databases 'c++-mode)
              (local-set-key "\C-c\C-j" 'semantic-ia-fast-jump)
              (local-set-key "\C-c\C-s" 'semantic-ia-show-summary)
-             (push 'company-semantic company-backends)))
+             ;(push 'company-semantic company-backends)
+             ))
 
 (use-package google-c-style
   :hook (c-mode-common . google-set-c-style)
@@ -2254,7 +2341,7 @@ If INITIAL is non-nil, use as initial input."
       :after company
       :hook (sml-mode . company-mlton-init)
       :config
-      (add-to-list 'company-backends 'company-mlton-grouped-backend))
+      (add-to-list company-backends 'company-mlton-grouped-backend))
 
 (use-package lua-mode
   :mode "\\.lua?\\'"
@@ -2341,7 +2428,7 @@ The current file is the file from which `add-to-load-path!' is used."
   (use-package company-ghci
     :after company
     :config
-    (add-to-list 'company-backends 'company-ghci))
+    (add-to-list company-backends 'company-ghci))
 
   (use-package lsp-haskell
     :after lsp
@@ -2354,7 +2441,7 @@ The current file is the file from which `add-to-load-path!' is used."
 (use-package merlin
   :after company
   :config
-  (add-to-list 'company-backends 'merlin-company-backend)
+  (add-to-list company-backends 'merlin-company-backend)
   (setq merlin-completion-with-doc t))
 
 (use-package tuareg
@@ -2421,8 +2508,8 @@ The current file is the file from which `add-to-load-path!' is used."
 (use-package company-c-headers
   :after company
   :config
-  (add-to-list 'company-backends 'company-c-headers)
-  (add-to-list 'company-c-headers-path-system "/usr/include/c++/v1/"))
+  (add-to-list company-backends 'company-c-headers)
+  (add-to-list company-c-headers-path-system "/usr/include/c++/v1/"))
 
 (use-package function-args
   :hook (c-common . function-args-mode)
@@ -2941,6 +3028,33 @@ delete."
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "-i --simple-prompt"
         python-shell-prompt-detect-failure-warning nil))
+
+(add-hook
+ 'python-mode-hook
+ (lambda ()
+   (mapc (lambda (pair) (push pair prettify-symbols-alist))
+         '(;; Syntax
+           ("def" .      #x2131)
+           ("not" .      #x2757)
+           ("in" .       #x2208)
+           ("not in" .   #x2209)
+           ("return" .   #x27fc)
+           ("yield" .    #x27fb)
+           ("for" .      #x2200)
+           ;; Base Types
+           ("int" .      #x2124)
+           ("float" .    #x211d)
+           ("str" .      #x1d54a)
+           ("True" .     #x1d54b)
+           ("False" .    #x1d53d)
+           ;; Mypy
+           ("Dict" .     #x1d507)
+           ("List" .     #x2112)
+           ("Tuple" .    #x2a02)
+           ("Set" .      #x2126)
+           ("Iterable" . #x1d50a)
+           ("Any" .      #x2754)
+           ("Union" .    #x22c3)))))
 
 ;;; an actual mode which uses it all
 (use-package elpy
