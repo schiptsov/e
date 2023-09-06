@@ -52,6 +52,9 @@
   (save-some-buffers t))
 (add-hook 'focus-out-hook #'save-all)
 
+(setq auto-revert-check-vc-info t)
+(global-auto-revert-mode)
+
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
@@ -140,7 +143,7 @@
         inhibit-startup-echo-area-message t
         inhibit-startup-screen t
         initial-scratch-message "")
-  (setq x-underline-at-descent-line t
+  (setq x-underline-at-descent-line nil
         underline-minimum-offset 1)
   (pixel-scroll-precision-mode 1)
   (setq pixel-scroll-precision-large-scroll-height 35.0)
@@ -862,9 +865,6 @@
   :straight '(:host github :repo "karthink/org-src-context")
   :hook (org-mode . org-src-context-mode))
 
-(use-package org-fragtog
-  :hook (org-mode . org-fragtog-mode))
-
 (use-package solaire-mode
   :hook (mixed-pitch-mode .  solaire-mode-reset)
   :hook (prog-mode . solaire-mode-reset)
@@ -978,16 +978,6 @@
 (use-package org-web-tools
   :after org)
 
-(use-package preview
-  :hook (LaTeX-mode . LaTeX-preview-setup)
-  :config
-  (setq-default preview-scale 1.4
-                preview-scale-function
-                (lambda () (* (/ 10.0 (preview-document-pt)) preview-scale))))
-
-(use-package latex-preview-pane
-  :commands org-latex-pane-mode)
-
 ;; (use-package predictive
 ;;   :config
 ;;   (set-default 'predictive-auto-add-to-dict t)
@@ -1019,7 +1009,7 @@
         TeX-save-query nil)
   (setq-default TeX-master nil))
 
-(use-package auctex-latehmk
+(use-package auctex-latexmk
   :after latex
   :init
   (setq auctex-latexmk-inherit-TeX-PDF-mode t)
@@ -1027,12 +1017,22 @@
   ;; Add LatexMk as a TeX target.
   (auctex-latexmk-setup))
 
+(use-package preview
+  :straight '(:type built-in)
+  :hook (LaTeX-mode . LaTeX-preview-setup)
+  :config
+  (setq-default preview-scale 1.4))
+
+(use-package latex-preview-pane
+  :commands org-latex-pane-mode)
+
 (use-package company-auctex
   :after company
   :config
   (add-to-list company-backends 'company-auctex-macros))
 
 (use-package xenops
+  :after latex
   :hook (LaTeX-mode . xenops-mode))
 
 (use-package adaptive-wrap
@@ -1046,6 +1046,7 @@
   :commands org-latex-preview)
 
 (use-package org-auctex
+  :after org
   :straight '(:host github :repo "karthink/org-auctex")
   :hook (org-mode . org-auctex-mode))
 
@@ -1057,6 +1058,10 @@
   (setq cdlatex-use-dollar-to-ensure-math t))
 
 (add-hook 'org-mode-hook 'turn-on-org-cdlatex)
+
+(use-package org-fragtog
+  :after org
+  :hook (org-mode . org-fragtog-mode))
 
 (with-eval-after-load 'org
   (setq org-todo-keywords
@@ -1172,6 +1177,8 @@
 
 (use-package info-colors
   :hook (Info-selection  . info-colors-fontify-node))
+
+(add-hook 'after-init-hook 'help-quick)
 
 (use-package which-key
   :diminish
@@ -1319,6 +1326,7 @@
                    ?n ?, ?/))
 )
 
+(with-eval-after-load 'avy
 (defun avy-action-helpful (pt)
   (save-excursion
     (goto-char pt)
@@ -1350,6 +1358,7 @@
 
 (setf (alist-get ?y avy-dispatch-alist) 'avy-action-yank
       (alist-get ?Y avy-dispatch-alist) 'avy-action-yank-whole-line)
+)
 
 (use-package avy-menu
   :after avy)
@@ -1377,6 +1386,7 @@
 (use-package urgrep
   :commands urgrep)
 
+(setq completions-detailed t)
 (setq completions-format 'one-column) ;; like ido
 (setq completion-styles '(flex basic partial-completion emacs22))
 
@@ -2254,6 +2264,33 @@ If INITIAL is non-nil, use as initial input."
 (use-package octave-mode
   :straight '(:type built-in)
   :mode "\\.m\\'")
+
+;; better and proper MATLAB
+(use-package julia-mode
+  :mode "\\.jl\\'")
+
+(use-package lsp-julia
+  :hook (julia-mode . lsp-deferred))
+
+(use-package eglot-jl
+  :after eglot
+  :init
+  :config (eglot-jl-init))
+
+(use-package julia-vterm)
+(use-package ob-julia-vterm)
+
+(use-package julia-repl
+  :hook (julia-mode . julia-repl-mode)
+  :hook (julia-repl-mode . julia-repl-use-emacsclient)
+  :config
+  (julia-repl-set-terminal-backend 'vterm))
+
+(use-package julia-snail
+  :hook (julia-mode . julia-snail-mode)
+  :config
+  (setq julia-snail-popup-display-eval-results :command)
+  (setq julia-snail-multimedia-enable t))
 
 (use-package emacs-lisp-mode
   :straight '(:type built-in)
