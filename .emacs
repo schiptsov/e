@@ -2267,14 +2267,18 @@ If INITIAL is non-nil, use as initial input."
 
 ;; better and proper MATLAB
 (use-package julia-mode
+  :interpreter "julia"
   :mode "\\.jl\\'")
 
 (use-package lsp-julia
-  :hook (julia-mode . lsp-deferred))
+  :hook (julia-mode . lsp-deferred)
+  :init
+  (setq setq lsp-julia-default-environment "~/.julia/environments/v1.9"))
 
 (use-package eglot-jl
   :after eglot
   :init
+  (setq eglot-jl-language-server-project "~/.julia/environments/v1.9")
   :config (eglot-jl-init))
 
 (use-package julia-vterm)
