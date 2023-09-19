@@ -68,9 +68,9 @@
 (setq-default socks-noproxy '("127.0.0.1"))
 (require 'socks)
 
-(customize-set-variable 'url-proxy-services
-                          '(("http"  . "127.0.0.1:8118")
-                            ("https" . "127.0.0.1:9060")))
+;; (customize-set-variable 'url-proxy-services
+;;                           '(("http"  . "127.0.0.1:8118")
+;;                             ("https" . "127.0.0.1:9060")))
 
 ;; we use straight.el
 (setq package-enable-at-startup nil)
@@ -657,15 +657,19 @@
    (Man-mode . mixed-pitch-mode)
    (Info-mode . mixed-pitch-mode)
    (org-mode . mixed-pitch-mode)
+   (LaTeX-mode . mixed-pitch-mode)
    (latex-mode . mixed-pitch-mode)
+   (tex-mode . mixed-pitch-mode)
    (markdown-mode . mixed-pitch-mode)
    (gfm-mode . mixed-pitch-mode)
    (nov-mode . mixed-pitch-mode))
   :hook (mixed-pitch-mode . (lambda ()
+                              (setq mixed-pitch-face 'variable-pitch)
                               (solaire-mode t)
                               (variable-pitch-mode t))))
 
 (use-package visual-fill-column
+  :demand
   :hook (visual-line-mode . visual-fill-column-mode))
 
 (defun display-ansi-colors ()
@@ -701,6 +705,11 @@
 
 (use-package spell-fu
   :config (global-spell-fu-mode t))
+
+(use-package flycheck-languagetool
+  :hook (text-mode . flycheck-languagetool-setup)
+  :init
+  (setq flycheck-languagetool-server-jar "/opt/LanguageTool/languagetool-server.jar"))
 
 (use-package sgml-mode
   :hook
@@ -776,12 +785,14 @@
 (straight-use-package 'engrave-faces)
 ;; (straight-use-package 'engrave-faces-latex)
 
-(add-to-list 'auto-mode-alist '("\\.tex\\'" . LaTeX-mode))
+(use-package latex-mode
+  :straight '(:type built-in))
 
 ;; we absolutely want to edit latex within org-mode
 (use-package auctex
   :demand
-  :commands (LaTeX-mode)
+  :mode ("\\.tex\\'" . LaTeX-mode)
+  :commands (latex-mode LaTeX-mode)
   :hook (LaTeX-mode . LaTeX-math-mode)
   :hook ((tex-mode-local-vars-hook
           latex-mode-local-vars-hook)
@@ -801,12 +812,19 @@
   (setq-default TeX-master nil))
 
 (use-package auctex-latexmk
+  :demand
   :after latex
   :init
   (setq auctex-latexmk-inherit-TeX-PDF-mode t)
   :config
   ;; Add LatexMk as a TeX target.
   (auctex-latexmk-setup))
+
+(use-package tex-fold
+  :demand
+  :straight '(:type built-in)
+  :after latex
+  :hook (TeX-mode . TeX-fold-mode))
 
 (use-package texfrag
   :demand
@@ -822,10 +840,12 @@
   (setq-default preview-scale 1.4))
 
 (use-package latex-preview-pane
+  :demand
   :after latex
   :commands org-latex-pane-mode)
 
 (use-package cdlatex
+  :demand
   :hook (LaTeX-mode . cdlatex-mode)
   :hook (org-mode . org-cdlatex-mode)
   :config
@@ -840,13 +860,14 @@
   :config
   (add-to-list 'company-backends 'company-auctex-macros t))
 
+(use-package adaptive-wrap
+  :demand
+  :hook (LaTeX-mode . adaptive-wrap-prefix-mode)
+  :init (setq-default adaptive-wrap-extra-indent 1))
+
 (use-package xenops
   :after latex
   :hook (LaTeX-mode . xenops-mode))
-
-(use-package adaptive-wrap
-  :hook (LaTeX-mode . adaptive-wrap-prefix-mode)
-  :init (setq-default adaptive-wrap-extra-indent 1))
 
 ;; Use the latest version
 (straight-use-package 'org-contrib)
@@ -1111,11 +1132,13 @@
         '(("i" "INBOX" entry (file+headline "~/INBOX.org" "Inbox")
            "* %?\n  %i\n  %a" :prepend t :kill-buffer t)
           ("t" "TODO" entry (file+headline "~/TODO.org" "Tasks")
-           "* TODO %?\n  %i\n  %a" :prepend t :kill-buffer t)
+           "* TODO %?\n SCHEDULED: %t\n %i\n  %a" :prepend t :kill-buffer t)
           ("p" "PLAN" entry (file+headline "~/PLAN.org" "Plans")
            "* PLAN %?\n  %i\n  %a" :prepend t :kill-buffer t)
           ("n" "NOTE" entry (file+datetree "~/NOTES.org" "Notes")
-           "* %?\nEntered on %U\n  %i\n  %a" :prepend t :kill-buffer t)))
+           "* %?\nEntered on %U\n  %i\n  %a" :prepend t :kill-buffer t)
+					("K" "Cliplink capture task" entry (file "")
+					 "* TODO %(org-cliplink-capture) \n  SCHEDULED: %t\n" :empty-lines 1)))
   )
 
 ;; "unstructured" note taking
@@ -1249,6 +1272,9 @@
 
 (use-package saveplace-pdf-view
   :after pdf-view-mode)
+
+(use-package org-pdftools
+						 :hook (org-load . org-pdftools-setup-link))
 
 (use-package markdown-mode
   :init
@@ -1780,7 +1806,8 @@ If INITIAL is non-nil, use as initial input."
   :after ivy
   :config
   ;; (setq all-the-icons-ivy-buffer-commands nil)
-  (all-the-icons-ivy-setup))
+  (all-the-icons-ivy-setup)
+	(all-the-icons-ivy-rich-mode))
 
 (use-package all-the-icons-ivy-rich
   :demand
@@ -2044,7 +2071,7 @@ If INITIAL is non-nil, use as initial input."
   :config
   (setq company-math-disallow-unicode-symbols-in-faces t)
   (add-to-list 'company-backends 'company-math-symbols-latex t)
-  (add-to-list 'company-backends 'company-math-symbols-unicode) t)
+  (add-to-list 'company-backends 'company-math-symbols-unicode t))
 
 (use-package company-org-block
   :after company
@@ -2146,6 +2173,41 @@ If INITIAL is non-nil, use as initial input."
   (setq lsp-enable-folding nil)
   (setq lsp-enable-on-type-formatting t)
   (setq lsp-auto-configure t))
+
+(use-package lsp-org
+  :after org
+  :straight '(:type built-in))
+
+(cl-defmacro lsp-org-babel-enable (lang)
+  "Support LANG in org source code block."
+  (cl-check-type lang string)
+  (let* ((edit-pre (intern (format "org-babel-edit-prep:%s" lang)))
+           (intern-pre (intern (format "lsp--%s" (symbol-name edit-pre)))
+))
+    `(progn
+       (defun ,intern-pre (info)
+         (setq buffer-file-name (or (->> info caddr (alist-get :file))
+                                    "org-src-babel.tmp"))
+         (setq-local lsp-headerline-breadcrumb-enable nil)
+         (lsp-deferred))
+         (put ',intern-pre 'function-documentation
+              (format "Enable `%s' in the buffer of org source block (%s)."
+                      'lsp-mode (upcase ,lang)))
+
+         (if (fboundp ',edit-pre)
+             (advice-add ',edit-pre :after ',intern-pre)
+           (progn
+             (defun ,edit-pre (info)
+               (,intern-pre info))
+             (put ',edit-pre 'function-documentation
+                  (format "Prepare local buffer environment for org source block (%s)."
+                          (upcase ,lang))))))))
+
+(defconst org-babel-lang-list
+  '("go" "python" "ipython" "ruby" "js" "css" "c" "rust" "ocaml" "haskell" "cpp" "c++"))
+(add-to-list 'org-babel-lang-list "shell")
+(dolist (lang org-babel-lang-list)
+  (eval `(lsp-org-babel-enable ,lang)))
 
 (use-package company-lsp
   :demand
@@ -3213,8 +3275,8 @@ delete."
   :mode "\\.py\\'"
   :interpreter "ipython"
   :hook (python-mode . tree-sitter-mode)
-
   :hook (python-mode . lsp-deferred)
+  :hook (python-mode . elpy-enable)
   :config
   (setq tab-width     4
         python-indent 4)
@@ -3265,8 +3327,6 @@ delete."
                         (set (make-local-variable 'company-backends)
                              '((elpy-company-backend :with
                                                      company-yasnippet company-lsp))))))
-  :init
-  (elpy-enable)
   :config
   (setq elpy-shell-echo-output nil)
   (setq elpy-rpc-python-command "python3")
@@ -4145,12 +4205,11 @@ delete."
 (straight-use-package 'engrave-faces)
 ;; (straight-use-package 'engrave-faces-latex)
 
-(add-to-list 'auto-mode-alist '("\\.tex\\'" . LaTeX-mode))
-
 ;; we absolutely want to edit latex within org-mode
 (use-package auctex
   :demand
-  :commands (latex-mode)
+  :mode ("\\.tex\\'" . LaTeX-mode)
+  :commands (LaTeX-mode)
   :hook (LaTeX-mode . LaTeX-math-mode)
   :hook ((tex-mode-local-vars-hook
           latex-mode-local-vars-hook)
@@ -4169,6 +4228,7 @@ delete."
   (setq-default TeX-master nil))
 
 (use-package auctex-latexmk
+  :demand
   :after latex
   :init
   (setq auctex-latexmk-inherit-TeX-PDF-mode t)
@@ -4178,7 +4238,7 @@ delete."
 
 (use-package texfrag
   :demand
-  :after latex
+  :after (latex preview)
   :hook (after-init . texfrag-global-mode))
 
 (use-package preview
@@ -4194,6 +4254,7 @@ delete."
   :commands org-latex-pane-mode)
 
 (use-package cdlatex
+  :demand
   :hook (LaTeX-mode . cdlatex-mode)
   :hook (org-mode . org-cdlatex-mode)
   :config
@@ -4212,9 +4273,8 @@ delete."
   :after latex
   :hook (LaTeX-mode . xenops-mode))
 
-(use-package adaptive-wrap
-  :hook (LaTeX-mode . adaptive-wrap-prefix-mode)
-  :init (setq-default adaptive-wrap-extra-indent 1))
+(use-package org-ref)
+(use-package ivy-bibtex)
 
 ;; Use the latest version
 (straight-use-package 'org-contrib)
@@ -4405,7 +4465,9 @@ delete."
   :config (hide-mode-line-mode t))
 
 (use-package focus
-  :commands (focus-mode focus-read-only-mode))
+  :commands (focus-mode focus-read-only-mode)
+	:config
+        (add-to-list 'focus-mode-to-thing '(org-mode . paragraph)))
 
 (use-package writeroom-mode
   :commands writeroom-mode)
@@ -4465,6 +4527,7 @@ delete."
   :hook (org-mode . org-auctex-mode))
 
 (use-package org-fragtog
+						 :demand
   :after org
   :hook (org-mode . org-fragtog-mode))
 
@@ -5274,6 +5337,8 @@ If INITIAL is non-nil, use as initial input."
 
 ;; less bloated isearch
 (use-package pcre2el)
+
+(use-package visual-regexp)
 (use-package visual-regexp-steroids
   :custom
   (vr/engine 'pcre2el "Use PCRE regular expressions")
@@ -5510,6 +5575,12 @@ If INITIAL is non-nil, use as initial input."
   (setq lsp-enable-folding nil)
   (setq lsp-enable-on-type-formatting t)
   (setq lsp-auto-configure t))
+
+(use-package devdocs
+  :after lsp
+  :config
+  :hook (devdocs-mode . (lambda ()
+    (face-remap-add-relative 'variable-pitch '(:family "SF Pro Text")))))
 
 (use-package company-lsp
   :demand
