@@ -62,11 +62,12 @@
   (load custom-file))
 (setq enable-local-variables :all)
 
-;; (setq-default socks-override-functions 1)
+(require 'socks)
+(setq-default socks-override-functions t)
+(setq-default socks-authentication-methods '((0 "No authentication" . identity)))
 (setq-default url-gateway-method 'socks)
 (setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
 (setq-default socks-noproxy '("127.0.0.1"))
-(require 'socks)
 
 ;; (customize-set-variable 'url-proxy-services
 ;;                           '(("http"  . "127.0.0.1:8118")
@@ -704,9 +705,12 @@
   :after ivy)
 
 (use-package spell-fu
+  :demand
   :config (global-spell-fu-mode t))
 
 (use-package flycheck-languagetool
+  :demand
+  :after flycheck
   :hook (text-mode . flycheck-languagetool-setup)
   :init
   (setq flycheck-languagetool-server-jar "/opt/LanguageTool/languagetool-server.jar"))
@@ -2813,6 +2817,21 @@ The current file is the file from which `add-to-load-path!' is used."
     (add-hook 'c++-mode-hook #'setup-flycheck-rtags)
     ))
 
+(use-package asm-mode
+  :config
+  (setq tab-always-indent (default-value 'tab-always-indent)))
+
+(use-package gas-mode)
+
+(use-package x86-lookup
+  :config
+  (setq  x86-lookup-pdf
+  "~/Books/64-iA32-Instruction-set-reference-vol2.pdf"))
+
+(use-package nasm-mode
+  :config
+  (add-hook 'asm-mode-hook 'nasm-mode))
+
 ;; just use LSP and clang-format tools
 (use-package cc-mode
   :hook (c-mode-common . (lambda ()
@@ -3424,8 +3443,8 @@ delete."
 
 (use-package elfeed-org
   :after elfeed
-  :init
-  (setq rmh-elfeed-org-files (expand-file-name "elfeed.org" user-emacs-directory))
+;;  :init
+;;  (setq rmh-elfeed-org-files (expand-file-name "elfeed.org" user-emacs-directory))
   :config
   (elfeed-org))
 
