@@ -40,6 +40,8 @@
 (setq byte-compile-warnings t)
 (setq native-comp-async-report-warnings-errors nil)
 
+(setq debug-on-error t)
+
 ;; a simple GC hack
 (add-function :after after-focus-change-function
               (defun garbage-collect-maybe ()
@@ -60,11 +62,13 @@
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
-(setq enable-local-variables :all)
+(setq enable-local-variables :safe)
 
 (require 'socks)
-(setq-default socks-override-functions t)
-(setq-default socks-authentication-methods '((0 "No authentication" . identity)))
+(setq-default socks-override-functions t) ;; seems buggy
+(setq-default socks-authentication-methods '((0 "No authentication" .
+                                                identity)))
+
 (setq-default url-gateway-method 'socks)
 (setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
 (setq-default socks-noproxy '("127.0.0.1"))
@@ -131,6 +135,16 @@
 (straight-use-package 'diminish)
 (straight-use-package 'delight)
 
+(use-package gcmh
+  :demand t
+  :diminish 'gcmh-mode
+  :config
+  (gcmh-mode t))
+
+(use-package auto-compile
+  :demand
+  :config (auto-compile-on-load-mode))
+
 (straight-use-package 'async)
 (use-package ob-async
   :hook (org-load . (lambda () (require 'ob-async))))
@@ -175,7 +189,7 @@
 (use-package doom-themes
   :demand
   :hook (after-init . (lambda ()
-                        (load-theme 'doom-gruvbox t)))
+                        (load-theme 'doom-tokyo-night t)))
   :hook (org-mode . (lambda ()
                       (require 'doom-themes-ext-org)
                       (doom-themes-org-config)))
@@ -183,7 +197,7 @@
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
         doom-themes-enable-italic t) ; if nil, italics is universally
   :config
-  (load-theme 'doom-gruvbox t))
+  (load-theme 'doom-tokyo-night t))
 
 ;; the font section
 (add-to-list 'default-frame-alist '(font . "SF Mono Light 16"))
@@ -198,6 +212,15 @@
 (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
 (set-face-attribute 'font-lock-comment-face nil :italic t)
 (set-face-attribute 'font-lock-doc-face nil :italic t)
+
+(bind-key "M-+" 'text-scale-increase)
+(bind-key "M-=" 'text-scale-increase)
+(bind-key "M--" 'text-scale-decrease)
+
+(defun my/text-scale-reset ()
+  (interactive)
+  (text-scale-set 0))
+(bind-key "M-0" 'my/text-scale-reset)
 
 (defface variable-pitch-serif
   '((t (:family "serif")))
@@ -221,8 +244,15 @@
 (use-package emacs
   :config
   (setq-default indent-tabs-mode nil)
+  (custom-set-variables '(indent-tabs-mode nil))
+
   (setq-default tab-always-indent 'complete)
   (setq-default completion-cycle-threshold 3)
+
+  (setq completion-ignore-case t)
+  (custom-set-variables
+   '(read-buffer-completion-ignore-case t)
+   '(read-file-name-completion-ignore-case t))
 
   (add-hook 'sh-mode-hook (lambda () (setq indent-tabs-mode t)))
 
@@ -449,6 +479,7 @@
 (global-set-key (kbd "C-c r") #'find-recent-file)
 
 (use-package savehist
+  :demand
   :config
   (setq history-delete-duplicates t)
   (setq savehist-save-minibuffer-history 1)
@@ -464,14 +495,12 @@
   (save-place-mode))
 
 (use-package midnight
-  :demand
   :config
   (setq midnight-period 7200)
   (midnight-mode 1))
 
 ;; ugly
 (use-package imenu-anywhere
-  :demand
   :bind
   ("M-i" . ivy-imenu-anywhere))
 
@@ -484,12 +513,6 @@
 (global-set-key [remap list-buffers] 'ibuffer)
 (global-set-key (kbd "C-x C-p") 'previous-buffer)  ; Overrides `mark-page'
 (global-set-key (kbd "C-x C-n") 'next-buffer)      ; Overrides `set-goal-column'
-
-(use-package gcmh
-  :demand t
-  :diminish 'gcmh-mode
-  :config
-  (gcmh-mode t))
 
 (use-package pinentry
   :config (pinentry-start))
@@ -579,14 +602,13 @@
       (ansi-color-apply-on-region compilation-filter-start (point-max))))
   (add-hook 'compilation-filter-hook 'colourise-compilation-buffer))
 
-(use-package auto-compile
-  :demand
-  :config (auto-compile-on-load-mode))
-
 (use-package flymake
+  :demand
   :bind (:map flymake-mode-map
               ("M-n" . flymake-goto-next-error)
               ("M-p" . flymake-goto-prev-error)))
+
+(setq flymake-allowed-file-name-masks nil)
 
 (defun my-find-tag ()
   "Use `completing-read' to navigate to a tag."
@@ -608,6 +630,11 @@
   (version-control t)
   (vc-make-backup-files t)
   (delete-old-versions t))
+
+;; move them all away into a single folder
+(custom-set-variables
+ '(backup-directory-alist
+   `(("." . ,(concat user-emacs-directory "backups")))))
 
 (use-package super-save
   :diminish
@@ -709,9 +736,8 @@
   :config (global-spell-fu-mode t))
 
 (use-package flycheck-languagetool
-  :demand
   :after flycheck
-  :hook (text-mode . flycheck-languagetool-setup)
+  :hook ((text-mode org-mode) . flycheck-languagetool-setup)
   :init
   (setq flycheck-languagetool-server-jar "/opt/LanguageTool/languagetool-server.jar"))
 
@@ -891,6 +917,7 @@
  'org-babel-load-languages
  '(
    (emacs-lisp . t)
+   (latex . t)
    (org . t)
    (shell . t)
    (awk . t)
@@ -905,6 +932,21 @@
    (sml . t)
    (erlang . t)
    ))
+
+(use-package ido
+  :disabled
+  :config
+  (ido-mode t)
+  (ido-everywhere 1)
+  (setq ido-use-virtual-buffers t)
+  (setq ido-enable-flex-matching t)
+  (setq ido-use-filename-at-point nil)
+  (setq ido-auto-merge-work-directories-length -1))
+
+(use-package ido-completing-read+
+  :disabled
+  :config
+  (ido-ubiquitous-mode 1))
 
 (use-package org
   :custom
@@ -941,7 +983,7 @@
 
   (setq org-directory (expand-file-name "org" (xdg-data-home)))
   (setq org-agenda-files (list org-directory))
-
+  ;; Not the same as INVOX.org (for org-roam)
   (setq org-default-notes-file (expand-file-name "~/NOTES.org"))
 
   (setq org-export-headline-levels 5) ; I like nesting
@@ -979,8 +1021,11 @@
   (global-set-key "\C-cc" 'org-capture)
   (global-set-key "\C-cl" 'org-store-link)
   (global-set-key "\C-ca" 'org-agenda)
-
+  (setq org-log-done t)
 )
+
+(custom-set-faces
+ '(org-indent ((t (:inherit (org-hide fixed-pitch))))))
 
 ;; will stumble on emacs-lisp blocks
 (use-package org-src-context
@@ -1024,6 +1069,17 @@
   ;; needs to be run after other hooks have acted.
   (run-at-time nil nil #'org-appear--set-elements))
 
+;;; Convert everything into an org file.
+(use-package org-pandoc-import
+  :straight '(org-pandoc-import :type git :host github :repo "tecosaur/org-pandoc-import"))
+
+(use-package wrap-region
+:config
+(wrap-region-mode t))
+
+(use-package org-preview-html
+  :after org)
+
 (use-package ox-clip
   :after org
   :config
@@ -1039,13 +1095,21 @@
   :commands (org-gfm-export-as-markdown org-gfm-export-to-markdown)
   :after ox)
 
+(use-package ox-texinfo
+  :straight (:type built-in)
+  :after ox)
+
 (use-package ox-hugo
   :after ox)
 
-(straight-use-package 'transient)
+;;; LeanPub (some day)
+(use-package ox-leanpub
+  :after org
+  :config
+  (require 'ox-leanpub-markdown)
+  (org-leanpub-book-setup-menu-markdown))
 
-(use-package org-pandoc-import
-  :straight '(org-pandoc-import :type git :host github :repo "tecosaur/org-pandoc-import"))
+(straight-use-package 'transient)
 
 (use-package guru-mode
   :demand
@@ -1087,6 +1151,8 @@
   :straight '(:type built-in)
   :diminish
   :after org
+  :custom
+  (org-indent-indentation-per-level 2)
   :hook (org-mode . org-indent-mode))
 
 (use-package org-rich-yank
@@ -1171,14 +1237,33 @@
            :map org-mode-map
            ("C-M-i" . completion-at-point))
   :config
+  (setq org-roam-completion-everywhere t)
   (org-roam-setup)
   (org-roam-db-autosync-mode))
+
+;; yet another "grep"
+(use-package deft
+  :commands (deft)
+  :after org-roam
+  :bind
+  ("C-c n d" . deft)
+  :config
+  (setq deft-default-extension "org")
+  (setq deft-org-mode-title-prefix t)
+  (setq deft-use-filename-as-title nil)
+  (setq deft-use-filter-string-for-filename t)
+  (setq deft-recursive t)
+  (setq deft-directory org-roam-directory
+        deft-extensions '("txt" "md" "org" "org.gpg")))
 
 ;; this has the same universal notions of sets and relations as SQL
 ;; https://github.com/alphapapa/org-ql/blob/master/examples.org
 (use-package org-ql
   :after org
   :commands (org-ql-search org-ql-find))
+
+(use-package org-transclusion
+	:after org-roam)
 
 (use-package org-super-agenda
   :after org-agenda
@@ -1638,6 +1723,7 @@ If INITIAL is non-nil, use as initial input."
             '(projectile-switch-project . project-file)))
 
 (use-package consult
+  :demand
   :bind (
     ([remap bookmark-jump] .               #'consult-bookmark)
     ([remap goto-line] .                   #'consult-goto-line)
@@ -1677,13 +1763,18 @@ If INITIAL is non-nil, use as initial input."
   (add-to-list 'consult-dir-sources 'consult-dir--source-tramp-ssh t)
   (add-to-list 'consult-dir-sources 'consult-dir--source-tramp-local t))
 
+(use-package consult-flymake
+  :demand
+  :straight '(:type built-in)
+  :after flymake)
+
 (use-package consult-flycheck
   :demand
-  :after (consult flycheck))
+  :after flycheck)
 
 (use-package consult-lsp
   :demand
-  :after (consult lsp)
+  :after lsp
     :init
   (map! :map lsp-mode-map [remap xref-find-apropos] #'consult-lsp-symbols))
 
@@ -2832,6 +2923,12 @@ The current file is the file from which `add-to-load-path!' is used."
   :config
   (add-hook 'asm-mode-hook 'nasm-mode))
 
+(use-package cperl-mode
+  :mode "\\.p[lm]\\'"
+  :interpreter "perl"
+  :config
+  (setq cperl-hairy t))
+
 ;; just use LSP and clang-format tools
 (use-package cc-mode
   :hook (c-mode-common . (lambda ()
@@ -2901,6 +2998,10 @@ The current file is the file from which `add-to-load-path!' is used."
 (use-package elisp-slime-nav
   :diminish
   :hook (emacs-lisp-mode  . elisp-slime-nav-mode))
+
+(use-package hl-sexp
+  :hook
+  ((clojure-mode lisp-mode emacs-lisp-mode) . hl-sexp-mode))
 
 (use-package eval-sexp-fu
   :hook (emacs-lisp-mode . eval-sexp-fu-flash-mode))
@@ -3292,6 +3393,9 @@ delete."
   :config
   (bash-completion-setup))
 
+(use-package sh-script
+  :hook (sh-mode . flymake-mode))
+
 (use-package lsp-pyright
   :config
   (setq lsp-pyright-disable-language-service nil
@@ -3312,7 +3416,7 @@ delete."
         python-indent 4)
   (setq indent-tabs-mode nil)
   (setq python-check-command "ruff")
-  (add-hook 'python-mode-hook #'flymake-mode)
+  ;;(add-hook 'python-mode-hook #'flymake-mode)
   (setq python-shell-interpreter "ipython"
         python-shell-interpreter-args "-i --simple-prompt"
         python-shell-prompt-detect-failure-warning nil))
