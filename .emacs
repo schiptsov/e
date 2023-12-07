@@ -64,10 +64,10 @@
   (load custom-file))
 (setq enable-local-variables :safe)
 
-(require 'socks)
-(setq-default socks-override-functions t) ;; seems buggy
-(setq-default socks-authentication-methods '((0 "No authentication" .
-                                                identity)))
+;; (require 'socks)
+;; (setq-default socks-override-functions t) ;; seems buggy
+;; (setq-default socks-authentication-methods '((0 "No authentication" .
+;;                                                 identity)))
 
 (setq-default url-gateway-method 'socks)
 (setq-default socks-server '("Tor" "127.0.0.1" 9050 5))
@@ -2171,7 +2171,8 @@ If INITIAL is non-nil, use as initial input."
   :config
   (setq company-math-disallow-unicode-symbols-in-faces t)
   (add-to-list 'company-backends 'company-math-symbols-latex t)
-  (add-to-list 'company-backends 'company-math-symbols-unicode t))
+  ;(add-to-list 'company-backends 'company-math-symbols-unicode t)
+  )
 
 (use-package company-org-block
   :after company
