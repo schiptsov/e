@@ -180,6 +180,22 @@ This is a variadic `cl-pushnew'."
     `(dolist (,var (list ,@values) (with-no-warnings ,place))
        (cl-pushnew ,var ,place :test #'equal))))
 
+(defmacro file! ()
+  "Return the file of the file this macro was called."
+  (or
+   ;; REVIEW: Use `macroexp-file-name' once 27 support is dropped.
+   (let ((file (car (last current-load-list))))
+     (if (stringp file) file))
+   (bound-and-true-p byte-compile-current-file)
+   load-file-name
+   buffer-file-name   ; for `eval'
+   (error "file!: cannot deduce the current file path")))
+
+(defmacro dir! ()
+  "Return the directory of the file this macro was called."
+  (let (file-name-handler-alist)
+    (file-name-directory (macroexpand '(file!)))))
+
 (defmacro add-load-path! (&rest dirs)
   "Add DIRS to `load-path', relative to the current file.
 The current file is the file from which `add-to-load-path!' is used."
@@ -418,12 +434,46 @@ DOCSTRING and BODY are as in `defun'.
   :after dired
   :hook (dired . dired-async-mode))
 
+(use-package dired-x
+  :straight '(:type built-in)
+  :hook (dired-mode . dired-omit-mode)
+  :commands (dired-jump
+             dired-jump-other-window
+             dired-omit-mode)
+  :config
+  (setq dired-omit-verbose nil
+        dired-omit-files
+        (concat dired-omit-files
+                "\\|^\\.DS_Store\\'"
+                "\\|^\\.project\\(?:ile\\)?\\'"
+                "\\|^\\.\\(?:svn\\|git\\)\\'"
+                "\\|^\\.ccls-cache\\'"
+                "\\|\\(?:\\.js\\)?\\.meta\\'"
+                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"
+                "^\\.[^.]\\|$Rhistory\\|$RData\\|__pycache__"))
+  )
+
 (use-package dired-single
   :after dired
   :bind (:map dired-mode-map
               ([remap dired-find-file] . dired-single-buffer)
               ([remap dired-up-directory] . dired-single-up-directory)
               ("M-DEL" . dired-prev-subdir)))
+
+(use-package diredfl
+  :hook (dired-mode . diredfl-mode))
+
+(use-package fd-dired
+  :init
+  (global-set-key [remap find-dired] #'fd-dired))
+
+(use-package dired-gitignore
+  :straight '(:host github :repo "johannes-mueller/dired-gitignore.el")
+  :hook (dired-mode . dired-gitignore-mode))
+
+(use-package dired-git-info
+  :hook (dired-mode . (lambda ()
+                        (dired-git-info-mode t))))
 
 (use-package dired-open
   :after (dired dired-jump)
@@ -790,15 +840,23 @@ DOCSTRING and BODY are as in `defun'.
 (use-package projectile
   :demand
   :diminish
+  :custom
+  (projectile-project-search-path (list (expand-file-name "~/")))
+  :bind-keymap ("C-c p" . projectile-command-map)
   :hook (emacs-startup . projectile-global-mode)
   :config
+  (setq projectile-project-search-path (list (expand-file-name "~/")))
+  (setq projectile-enable-caching t)
+  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
   (setq projectile-sort-order 'recentf))
 
 (use-package ibuffer-projectile
+  :demand
   :after projectile
   :hook (ibuffer . ibuffer-projectile-set-filter-groups))
 
 (use-package counsel-projectile
+  :demand
   :after (projectile ivy-rich counsel)
   :commands (consult-projectile)
   :bind (([remap projectile-find-dir]         . #'counsel-projectile-find-dir)
@@ -808,6 +866,7 @@ DOCSTRING and BODY are as in `defun'.
          ([remap projectile-switch-project]   . #'counsel-projectile-switch-project)))
 
 (use-package consult-projectile
+  :demand
   :after (projectile consult)
   :commands (consult-projectile))
 
@@ -906,23 +965,23 @@ DOCSTRING and BODY are as in `defun'.
                                       (add-hook
                                        'completion-at-point-functions
                                        #'cape-elisp-block 0 t)))
-  :bind (("C-c p p" . completion-at-point) ;; capf
-         ("C-c p t" . complete-tag)        ;; etags
-         ("C-c p d" . cape-dabbrev)        ;; or dabbrev-completion
-         ("C-c p h" . cape-history)
-         ("C-c p f" . cape-file)
-         ("C-c p k" . cape-keyword)
-         ("C-c p s" . cape-elisp-symbol)
-         ("C-c p e" . cape-elisp-block)
-         ("C-c p a" . cape-abbrev)
-         ("C-c p l" . cape-line)
-         ("C-c p w" . cape-dict)
-         ("C-c p :" . cape-emoji)
-         ("C-c p \\" . cape-tex)
-         ("C-c p _" . cape-tex)
-         ("C-c p ^" . cape-tex)
-         ("C-c p &" . cape-sgml)
-         ("C-c p r" . cape-rfc1345))
+  :bind (("C-c a p" . completion-at-point) ;; capf
+         ("C-c a t" . complete-tag)        ;; etags
+         ("C-c a d" . cape-dabbrev)        ;; or dabbrev-completion
+         ("C-c a h" . cape-history)
+         ("C-c a f" . cape-file)
+         ("C-c a k" . cape-keyword)
+         ("C-c a s" . cape-elisp-symbol)
+         ("C-c a e" . cape-elisp-block)
+         ("C-c a a" . cape-abbrev)
+         ("C-c a l" . cape-line)
+         ("C-c a w" . cape-dict)
+         ("C-c a :" . cape-emoji)
+         ("C-c a \\" . cape-tex)
+         ("C-c a _" . cape-tex)
+         ("C-c a ^" . cape-tex)
+         ("C-c a &" . cape-sgml)
+         ("C-c a r" . cape-rfc1345))
   :config
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
@@ -1031,9 +1090,10 @@ DOCSTRING and BODY are as in `defun'.
 (use-package better-jumper)
 
 (use-package dumb-jump
+  :demand
   :config
   (setq dumb-jump-prefer-searcher 'rg)
-  (setq dumb-jump-default-project "~/code")
+  (setq dumb-jump-default-project "~/")
   (setq xref-show-definitions-function #'xref-show-definitions-completing-read)
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   (setq dumb-jump-quiet nil))
@@ -1044,6 +1104,8 @@ DOCSTRING and BODY are as in `defun'.
 ;;; magit
 (use-package magit
   :demand
+  :after transient
+  :hook (magit-post-refresh  . diff-hl-magit-post-refresh)
   :init
   (setq magit-log-arguments '("--graph" "--decorate" "--color"))
   (setq git-commit-fill-column 72)
@@ -1092,8 +1154,8 @@ DOCSTRING and BODY are as in `defun'.
         (alt-search-fn #'ivy--regex-ignore-order))
     (setq ivy-re-builders-alist
           `((counsel-rg     . ,standard-search-fn)
-            (swiper         . ,standard-search-fn)
-            (swiper-isearch . ,standard-search-fn)
+            ;; (swiper         . ,standard-search-fn)
+            ;; (swiper-isearch . ,standard-search-fn)
             (t . ,alt-search-fn))
           ivy-more-chars-alist
           '((counsel-rg . 1)
@@ -1103,7 +1165,7 @@ DOCSTRING and BODY are as in `defun'.
   (require 'counsel nil t)
   (add-to-list 'counsel-compile-root-functions
                #'projectile-project-root)
-  (setq ivy-fixed-height-minibuffer t)
+  (setq ivy-fixed-height-minibuffer nil)
   (setq ivy-use-virtual-buffers t))
 
 (use-package ivy-rich
@@ -1459,7 +1521,10 @@ DOCSTRING and BODY are as in `defun'.
   )
 
 (use-package ivy-xref
-  :after ivy)
+  :after ivy
+  :config
+  ;; (setq xref-show-xrefs-function #'ivy-xref-show-xrefs)
+  )
 
 ;;; eldoc
 (use-package eldoc
@@ -2089,11 +2154,12 @@ delete."
 
 (use-package eshell-toggle
   :custom
-  (eshell-toggle-use-projectile-root nil)
+  (eshell-toggle-use-git-root t)
+  (eshell-toggle-use-projectile-root t)
   (eshell-toggle-run-command nil)
   (eshell-toggle-init-function #'eshell-toggle-init-eshell)
   :bind
-  ("C-c p" . eshell-toggle))
+  ("C-c s t" . eshell-toggle))
 
 (use-package eshell-syntax-highlighting
   :config
@@ -2404,7 +2470,22 @@ typically insert macros."
 (straight-use-package 'math-symbol-lists)
 
 (use-package company-math
-  :after company)
+  :after company
+  :config
+  (setq company-math-disallow-unicode-symbols-in-faces t)
+  (add-to-list 'company-backends 'company-math-symbols-latex)
+  (add-to-list 'company-backends 'company-math-symbols-unicode))
+
+;; (use-package company-statistics
+;;  :after company
+;;  :config (company-statistics-mode t))
+
+(use-package company-web
+  :after company
+  :config
+  :hook (nxml-mode . (lambda ()
+                       (add-to-list 'company-backends 'company-web-html))))
+
 
 ;; load this early
 (straight-use-package 'ob-rust)
@@ -2774,10 +2855,17 @@ font-family: 'Source Code Pro', monospace;
 
 (use-package sbt-mode)
 
-(use-package scala-mode)
+(use-package scala-mode
+  :custom
+  (flycheck-scala-executable "scalac --color never")
+  :interpreter
+  ("scala3 --color never" . scala-mode)
+  :config
+  (setq prettify-symbols-alist scala-prettify-symbols-alist))
 
 (use-package lsp-metals
-  :demand)
+  :demand
+  :hook (scala-mode . lsp-deferred))
 
 ;;; Python
 ;; use the built-in ones
@@ -2941,6 +3029,9 @@ font-family: 'Source Code Pro', monospace;
 (use-package realgud
   :commands realgud:gdb)
 
+(use-package rmsbolt
+  :commands (rmsbolt))
+
 ;;; pdf
 (use-package pdf-tools
   :mode ("\\.pdf\\'" . pdf-view-mode)
@@ -3080,6 +3171,10 @@ font-family: 'Source Code Pro', monospace;
 
 ;; (use-package yeetube)
 
+(use-package octave-mode
+  :straight '(:type built-in)
+  :mode "\\.m\\'")
+
 ;; haskell
 (after! projectile
   (add-to-list 'projectile-project-root-files "stack.yaml"))
@@ -3111,17 +3206,34 @@ font-family: 'Source Code Pro', monospace;
 ;;; Common Lisp
 (use-package sly
   :hook (lisp-mode-local-vars . sly-editing-mode)
+  ;; :hook (inferior-lisp-mode . inferior-slye-mode)
   :custom
   (inferior-lisp-program "sbcl")
   :init
+  (setq inferior-lisp-program "sbcl")
+  (setq sly-lisp-implementations
+        '((sbcl ("/usr/bin/sbcl"))))
+  (setq sly-auto-start 'always)
   (setq sly-contribs '(sly-fancy
+                       sly-autodoc
                        sly-indentation
+                       sly-fuzzy
+                       sly-company
+                       sly-references
+                       sly-repl
                        sly-sbcl-exts
                        sly-scratch))
   :config
   (setq sly-net-coding-system 'utf-8-unix)
   (require 'sly-quicklisp)
-  (sly-setup))
+  (sly-setup)
+  ;; (sly-autodoc-mode)
+  )
+
+(use-package sly-company
+  :after (sly company)
+  :config (setq sly-company-completion 'fuzzy
+                sly-company-after-completion 'sly-company-just-one-space))
 
 (use-package sly-repl-ansi-color
   :init
@@ -3141,6 +3253,9 @@ font-family: 'Source Code Pro', monospace;
   (add-to-list 'sly-contribs 'sly-stepper))
 
 ;;; ocaml
+(after! projectile
+  (add-to-list 'projectile-project-root-files "dune-project"))
+
 (use-package merlin
   :after company
   :config
