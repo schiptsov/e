@@ -1077,26 +1077,45 @@ DOCSTRING and BODY are as in `defun'.
   (setq eshell-plain-grep-behavior nil)
   :config
   (setq wgrep-enable-key "w")
+  (setq grep-find-ignored-directories
+        (append
+         (list
+          ".git"
+          ".hg"
+          ".idea"
+          ".project"
+          ".settings"
+          ".svn"
+          "bootstrap*"
+          "pyenv"
+          "target"
+          )
+         grep-find-ignored-directories))
+  (setq grep-find-ignored-files
+        (append
+         (list
+          "*.blob"
+          ".factorypath"
+          "*.gz"
+          "*.jar"
+          "*.xd"
+          "TAGS"
+          "dependency-reduced-pom.xml"
+          "projectile.cache"
+          "workbench.xmi"
+          )
+         grep-find-ignored-files))
   (when (executable-find "rg")
     (setq-default grep-program "rg")
     (grep-apply-setting
      'grep-find-command
-     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27))
-    (add-to-list 'grep-find-ignored-directories "node_modules")
-    (add-to-list 'grep-find-ignored-directories ".vscode")
-    (add-to-list 'grep-find-ignored-directories "target")
-    (global-set-key (kbd "C-x g") 'grep-find)))  ; it works
+     '("rg -n -H --no-heading -e '' $(git rev-parse --show-toplevel || pwd)" . 27)))
+  (add-to-list 'grep-find-ignored-directories "node_modules")
+  (add-to-list 'grep-find-ignored-directories ".vscode")
+  (add-to-list 'grep-find-ignored-directories "target")
+  (global-set-key (kbd "C-x g") 'grep-find))  ; it works
 
 (use-package better-jumper)
-
-(use-package dumb-jump
-  :demand
-  :config
-  (setq dumb-jump-prefer-searcher 'rg)
-  (setq dumb-jump-default-project "~/")
-  (setq xref-show-definitions-function #'xref-show-definitions-completing-read)
-  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
-  (setq dumb-jump-quiet nil))
 
 ;;; trainsient first
 (straight-use-package 'transient)
@@ -1139,6 +1158,11 @@ DOCSTRING and BODY are as in `defun'.
   (setq diff-hl-flydiff-delay 0.5)  ; default: 0.3
   (setq diff-hl-show-staged-changes nil)
   (global-diff-hl-mode t))
+
+;;; old is gold
+(use-package multiple-cursors
+  :bind
+  ("C->" . 'mc/mark-next-like-this))
 
 (use-package expand-region
   :config (global-set-key (kbd "C-=") 'er/expand-region))
@@ -1513,13 +1537,26 @@ DOCSTRING and BODY are as in `defun'.
 
 ;;; xref
 (use-package xref
+  :demand
   :after consult
   :custom
   (consult-line-start-from-top t)
   (xref-show-definitions-function #'consult-xref)
-  (xref-show-xrefs-function #'consult-xref)
-  )
+  (xref-show-xrefs-function #'consult-xref))
 
+;;; dumb-jump
+(use-package dumb-jump
+  :demand
+  :after xref
+  :init
+  (setq xref-show-definitions-function #'xref-show-definitions-completing-read)
+  :config
+  (setq dumb-jump-prefer-searcher 'rg)
+  (setq dumb-jump-default-project "~/")
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
+  (setq dumb-jump-quiet nil))
+
+;; obsolete
 (use-package ivy-xref
   :after ivy
   :config
@@ -1528,6 +1565,7 @@ DOCSTRING and BODY are as in `defun'.
 
 ;;; eldoc
 (use-package eldoc
+  :demand
   :diminish
   :after company
   :hook (after-init . global-eldoc-mode)
@@ -1616,7 +1654,7 @@ DOCSTRING and BODY are as in `defun'.
 (use-package dap-mode
   :after lsp-mode
   :config
-  (dap-mode t)
+  (dap-auto-configure-mode)
   (dap-ui-mode t))
 
 ;;; smartparens
@@ -1675,6 +1713,9 @@ DOCSTRING and BODY are as in `defun'.
   (with-eval-after-load 'semantic
     (semantic-default-emacs-lisp-setup)))
 
+(use-package hl-sexp
+  :hook ((lisp-mode clojure-mode) . hl-sexp-mode))
+
 ;; (use-package gtags-mode
 ;;   :hook ((emacs-startup . gtags-mode))
 ;;   :config
@@ -1704,8 +1745,8 @@ DOCSTRING and BODY are as in `defun'.
 (use-package flycheck-package
   :hook (emacs-lisp-mode . flycheck-package-setup))
 
-  (use-package flycheck-elsa
-    :hook (emacs-lisp-mode . flycheck-elsa-setup))
+(use-package flycheck-elsa
+  :hook (emacs-lisp-mode . flycheck-elsa-setup))
 
 (use-package highlight-quoted
   :hook (emacs-lisp-mode . highlight-quoted-mode))
@@ -2513,7 +2554,7 @@ typically insert macros."
    (erlang . t)
    ))
 
-;;; (org-mode) org-mode!
+;;; (org-mode) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; need to load it so org-capture will work form anywhere
 ;; ~(directory-files org-directory t "\\.org$")~
 (use-package org
@@ -2667,7 +2708,7 @@ typically insert macros."
   :hook (org-mode . toc-org-mode))
 
 
-;;; org-roam
+;;; org-roam ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (use-package org-roam
   :demand
   :after org
@@ -2692,7 +2733,16 @@ typically insert macros."
   :hook (org-roam . consult-org-roam-mode)
   :custom
   (consult-org-roam-grep-function #'consult-ripgrep)
-)
+  )
+
+(use-package consult-notes
+  :after org)
+
+(use-package org-drill
+ :after org)
+
+(use-package org-fc
+ :after org)
 
 ;;; org-publish
 (use-package org-publish
@@ -2755,11 +2805,11 @@ font-family: 'Source Code Pro', monospace;
 ;;; org-pandoc-import
 (use-package org-pandoc-import
   :straight (:host github
-             :repo "tecosaur/org-pandoc-import"
-             :files ("*.el" "filters" "preprocessors"))
+                   :repo "tecosaur/org-pandoc-import"
+                   :files ("*.el" "filters" "preprocessors"))
   :after org)
 
-;;; (ox) exports
+;;; (ox) exports ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (use-package ox
   :straight (:type built-in)
   :after org
@@ -2816,7 +2866,7 @@ font-family: 'Source Code Pro', monospace;
 ;;; CSV
 (use-package csv-mode :mode ("\\.\\(csv\\|tsv\\)\\'"))
 
-;;; Java
+;;; Java ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; [[https://github.com/emacs-lsp/lsp-java]]
 (after! 'projectile
   (pushnew! projectile-project-root-files "gradlew" "build.gradle"))
@@ -2824,17 +2874,31 @@ font-family: 'Source Code Pro', monospace;
 (use-package java-mode
   :straight '(:type built-in))
 
-(use-package lsp-java :config (add-hook 'java-mode-hook 'lsp))
+(use-package eglot-java
+  :after eglot)
+
+(use-package lsp-java
+  :hook (java-mode lsp-deferred))
 
 (use-package android-mode
-  :after java
+  :after java-mode
   :commands android-mode
   :hook (yas-minor-mode . android-mode))
 
 (use-package dap-java
-  :straight '(:type built-in))
+  :straight '(:type built-in)
+  :after lsp-java)
 
-;;; Clojure
+;;; Kotlin ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(use-package lsp-kotlin
+  :straight '(:type built-in)
+  :hook (kotlin-mode lsp-deferred))
+
+(use-package kotlin-mode)
+
+(use-package flycheck-kotlin)
+
+;;; Clojure ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (after! projectile
   (pushnew! projectile-project-root-files "project.clj" "build.boot"
             "deps.edn"))
@@ -2845,6 +2909,11 @@ font-family: 'Source Code Pro', monospace;
 (use-package cider)
 (use-package clj-refactor)
 (use-package flycheck-clj-kondo)
+
+(use-package let-alist)
+(use-package flycheck-clojure
+  :config
+  (flycheck-clojure-setup))
 
 (use-package neil
   :straight (:host github :repo "babashka/neil" :files ("*.el")))
@@ -3035,6 +3104,7 @@ font-family: 'Source Code Pro', monospace;
 ;;; pdf
 (use-package pdf-tools
   :mode ("\\.pdf\\'" . pdf-view-mode)
+  :hook (pdf-view-mode . (lambda () (hide-modeline-mode t)))
   :init
   (setq mailcap-user-mime-data
         '((type . "application/pdf")
@@ -3052,6 +3122,7 @@ font-family: 'Source Code Pro', monospace;
   :straight '(:host github :repo "dalanicolai/djvu3")
   :magic ("%DJVU" . djvu-read-mode)
   ;; :mode ("\\.djvu\\'" . djvu-read-mode)
+  :hook (djvu-read-mode . (lambda () (hide-modeline-mode t)))
   )
 
 ;;; mu4e
@@ -3206,7 +3277,9 @@ font-family: 'Source Code Pro', monospace;
 ;;; Common Lisp
 (use-package sly
   :hook (lisp-mode-local-vars . sly-editing-mode)
-  ;; :hook (inferior-lisp-mode . inferior-slye-mode)
+  :hook (inferior-lisp-mode . (lambda ()
+                                (hide-modeline-mode t)
+                                (inferior-sly-mode t)))
   :custom
   (inferior-lisp-program "sbcl")
   :init
