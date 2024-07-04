@@ -2880,6 +2880,8 @@ font-family: 'Source Code Pro', monospace;
 (use-package lsp-java
   :hook (java-mode lsp-deferred))
 
+(use-package javadoc-lookup)
+
 (use-package android-mode
   :after java-mode
   :commands android-mode
@@ -3104,7 +3106,7 @@ font-family: 'Source Code Pro', monospace;
 ;;; pdf
 (use-package pdf-tools
   :mode ("\\.pdf\\'" . pdf-view-mode)
-  :hook (pdf-view-mode . (lambda () (hide-modeline-mode t)))
+  :hook (pdf-view-mode . (lambda () (hide-mode-line-mode t)))
   :init
   (setq mailcap-user-mime-data
         '((type . "application/pdf")
@@ -3122,7 +3124,7 @@ font-family: 'Source Code Pro', monospace;
   :straight '(:host github :repo "dalanicolai/djvu3")
   :magic ("%DJVU" . djvu-read-mode)
   ;; :mode ("\\.djvu\\'" . djvu-read-mode)
-  :hook (djvu-read-mode . (lambda () (hide-modeline-mode t)))
+  :hook (djvu-read-mode . (lambda () (hide-mode-line-mode t)))
   )
 
 ;;; mu4e
@@ -3278,7 +3280,7 @@ font-family: 'Source Code Pro', monospace;
 (use-package sly
   :hook (lisp-mode-local-vars . sly-editing-mode)
   :hook (inferior-lisp-mode . (lambda ()
-                                (hide-modeline-mode t)
+                                (hide-mode-line-mode t)
                                 (inferior-sly-mode t)))
   :custom
   (inferior-lisp-program "sbcl")
@@ -3290,7 +3292,6 @@ font-family: 'Source Code Pro', monospace;
   (setq sly-contribs '(sly-fancy
                        sly-autodoc
                        sly-indentation
-                       sly-fuzzy
                        sly-company
                        sly-references
                        sly-repl
